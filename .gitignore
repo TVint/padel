@@ -1,0 +1,4 @@
+.DS_Store
+*.sqlite-journal
+__pycache__/
+*.log

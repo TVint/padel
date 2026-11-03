@@ -1,0 +1,793 @@
+/* ============================================================================
+   REBRUNCH // REPUBLIC SPORT VILLAGE - 8-BIT GAME BOY COLOR CSS (css/retro.css)
+   Faithful to the official REBRUNCH poster & handheld pixel-art console shell
+   ============================================================================ */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+    --shell-bg:       #39445b;
+    --shell-dark:     #262e40;
+    --shell-darker:   #191f2c;
+    --shell-light:    #52607d;
+    --border-black:   #10141d;
+    --lcd-bg:         #5b7c68;
+    --lcd-light:      #749982;
+    --lcd-dark:       #354d3e;
+    --lcd-ink:        #111e16;
+    --tt-yellow:      #f5b82e;
+    --tt-lime:        #7fd141;
+    --tt-green:       #6bc947;
+    --tt-red:         #d33636;
+    --tt-cyan:        #59b8d9;
+    --tt-white:       #f4f7f0;
+}
+
+body {
+    background-color: #131722;
+    background-image:
+        radial-gradient(#252d40 1px, transparent 1px),
+        radial-gradient(#1c2333 1px, #131722 1px);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+    color: var(--tt-white);
+    font-family: 'Press Start 2P', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 16px 10px 40px;
+    overflow-x: hidden;
+}
+
+/* ============================================================================
+   OUTER GAME BOY COLOR SHELL
+   ============================================================================ */
+.gbc-shell {
+    width: 100%;
+    max-width: 500px;
+    background: var(--shell-bg);
+    border: 5px solid var(--border-black);
+    border-radius: 14px;
+    box-shadow:
+        inset 4px 4px 0 var(--shell-light),
+        inset -4px -4px 0 var(--shell-dark),
+        0 18px 40px rgba(0, 0, 0, 0.75);
+    padding: 20px 18px 18px;
+    position: relative;
+    user-select: none;
+}
+
+/* Corner Screws */
+.screw {
+    width: 14px;
+    height: 14px;
+    background: #6c7891;
+    border: 2px solid var(--border-black);
+    border-radius: 50%;
+    position: absolute;
+    box-shadow: inset 1px 1px 0 #9ba7bf;
+    z-index: 5;
+}
+.screw::after {
+    content: "+";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: #1f2533;
+    line-height: 1;
+}
+.screw.tl { top: 8px; left: 8px; }
+.screw.tr { top: 8px; right: 8px; }
+.screw.bl { bottom: 8px; left: 8px; }
+.screw.br { bottom: 8px; right: 8px; }
+
+/* Top embossed label */
+.shell-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 7px;
+    color: #8493b0;
+    letter-spacing: 0.5px;
+    margin: 0 14px 8px;
+    text-shadow: 1px 1px 0 var(--border-black);
+}
+.audio-toggle-btn {
+    background: var(--shell-dark);
+    color: var(--tt-yellow);
+    border: 2px solid var(--border-black);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 4px 6px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--border-black);
+}
+.audio-toggle-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--border-black);
+}
+
+/* ============================================================================
+   RECESSED BEZEL & SAGE-GREEN LCD SCREEN
+   ============================================================================ */
+.lcd-bezel {
+    background: var(--shell-dark);
+    border: 5px solid var(--border-black);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow:
+        inset 4px 4px 0 #1c2230,
+        inset -4px -4px 0 #323c52;
+    position: relative;
+}
+
+.lcd-screen {
+    background-color: var(--lcd-bg);
+    background-image:
+        repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.08) 0px,
+            rgba(0, 0, 0, 0.08) 1px,
+            transparent 1px,
+            transparent 3px
+        );
+    border: 5px solid var(--border-black);
+    border-radius: 12px;
+    min-height: 430px;
+    max-height: 470px;
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: inset 0 0 18px rgba(16, 30, 20, 0.45);
+    padding: 12px 10px;
+    color: var(--lcd-ink);
+    scrollbar-width: thin;
+    scrollbar-color: var(--shell-dark) var(--lcd-bg);
+}
+
+/* Views inside LCD */
+.lcd-view {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-height: 400px;
+}
+.lcd-view.active {
+    display: flex;
+}
+
+/* Curtain unlock transition */
+.curtain-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--border-black);
+    z-index: 40;
+    pointer-events: none;
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.38s steps(8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tt-yellow);
+    font-size: 11px;
+    text-align: center;
+    padding: 20px;
+}
+.curtain-overlay.closing {
+    transform: scaleY(1);
+}
+
+/* ============================================================================
+   VIEW 1: INTRO / POSTER REBRUNCH SCREEN
+   ============================================================================ */
+.brand-republic {
+    font-size: 22px;
+    color: var(--tt-yellow);
+    text-shadow: 2px 2px 0 var(--border-black);
+    letter-spacing: 1px;
+    text-align: center;
+    margin-top: 2px;
+}
+.brand-sub {
+    font-size: 8px;
+    color: var(--tt-yellow);
+    text-shadow: 1px 1px 0 var(--border-black);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+.event-date-block {
+    text-align: center;
+    margin-bottom: 8px;
+}
+.event-day {
+    font-size: 19px;
+    color: var(--tt-yellow);
+    text-shadow: 2px 2px 0 var(--border-black);
+    margin-bottom: 4px;
+}
+.event-date-num {
+    font-size: 19px;
+    text-shadow: 2px 2px 0 var(--border-black);
+    margin-bottom: 5px;
+}
+.event-date-num .num { color: var(--tt-yellow); }
+.event-date-num .month { color: var(--tt-lime); }
+.event-hours {
+    font-size: 9px;
+    color: var(--tt-yellow);
+    text-shadow: 1px 1px 0 var(--border-black);
+}
+
+/* Pixel-art illustration container */
+.hero-art-box {
+    position: relative;
+    width: 100%;
+    max-width: 310px;
+    margin: 6px auto 8px;
+    text-align: center;
+}
+.hero-art-canvas {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    display: block;
+    margin: 0 auto;
+}
+
+.rebrunch-banner {
+    background:
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 6px),
+        repeating-linear-gradient(-45deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 6px),
+        #2b384e;
+    border: 4px solid var(--border-black);
+    padding: 8px 10px 6px;
+    text-align: center;
+    width: 96%;
+    box-shadow: 0 4px 0 var(--border-black);
+    margin-top: -4px;
+}
+.rebrunch-word {
+    font-size: 24px;
+    letter-spacing: 1px;
+    text-shadow: 3px 3px 0 var(--border-black);
+}
+.rebrunch-word .r-yel { color: var(--tt-yellow); }
+.rebrunch-word .r-grn { color: var(--tt-lime); }
+
+.eat-play-pill {
+    background: var(--shell-bg);
+    border: 3px solid var(--border-black);
+    padding: 5px 12px;
+    font-size: 9px;
+    margin-top: -3px;
+    margin-bottom: 10px;
+    box-shadow: 0 3px 0 var(--border-black);
+    text-shadow: 1px 1px 0 var(--border-black);
+}
+.eat-play-pill .c-eat { color: #f5932e; }
+.eat-play-pill .c-play { color: var(--tt-yellow); }
+.eat-play-pill .c-rep { color: var(--tt-cyan); }
+
+/* Welcome Pokémon Dialogue Box */
+.welcome-dialog {
+    width: 96%;
+    background: #e6f2ea;
+    border: 3px solid var(--border-black);
+    box-shadow: inset 2px 2px 0 #ffffff, 3px 3px 0 var(--border-black);
+    padding: 8px 10px;
+    font-size: 8px;
+    line-height: 1.6;
+    color: var(--border-black);
+    margin-bottom: 10px;
+    position: relative;
+}
+.welcome-dialog .cursor-arrow {
+    display: inline-block;
+    color: var(--tt-red);
+    animation: blink-anim 0.8s step-end infinite;
+}
+
+.lcd-cta-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 96%;
+    margin-top: auto;
+}
+.gbc-cta-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 10px 8px;
+    border: 3px solid var(--border-black);
+    background: var(--tt-yellow);
+    color: var(--border-black);
+    cursor: pointer;
+    box-shadow: inset 2px 2px 0 #ffe07d, 3px 3px 0 var(--border-black);
+    text-align: center;
+    line-height: 1.4;
+}
+.gbc-cta-btn:hover {
+    filter: brightness(1.06);
+}
+.gbc-cta-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--border-black);
+}
+.gbc-cta-btn.green {
+    background: var(--tt-green);
+    box-shadow: inset 2px 2px 0 #9df07a, 3px 3px 0 var(--border-black);
+}
+.gbc-cta-btn.cyan {
+    background: var(--tt-cyan);
+    box-shadow: inset 2px 2px 0 #93dDF5, 3px 3px 0 var(--border-black);
+}
+
+/* ============================================================================
+   VIEW 2: SCHEDA GIOCATORE (REGISTRATION FORM)
+   ============================================================================ */
+.trainer-card {
+    width: 98%;
+    background: #dfeee4;
+    border: 4px solid var(--border-black);
+    box-shadow: inset 2px 2px 0 #ffffff, 4px 4px 0 var(--border-black);
+    padding: 10px;
+    color: var(--border-black);
+}
+.trainer-card-header {
+    background: var(--shell-dark);
+    color: var(--tt-yellow);
+    padding: 7px 8px;
+    font-size: 9px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border: 2px solid var(--border-black);
+}
+.form-field {
+    margin-bottom: 9px;
+}
+.form-field label {
+    display: block;
+    font-size: 8px;
+    margin-bottom: 4px;
+    color: #16261c;
+    line-height: 1.4;
+}
+.gb-input,
+.gb-select {
+    width: 100%;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 8px;
+    background: #ffffff;
+    color: var(--border-black);
+    border: 3px solid var(--border-black);
+    outline: none;
+}
+.gb-input:focus,
+.gb-select:focus {
+    background: #fff9d6;
+}
+.gb-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.gb-radio-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: #c8dfd0;
+    border: 2px solid var(--border-black);
+    padding: 6px 8px;
+    font-size: 8px;
+    cursor: pointer;
+}
+.gb-radio-pill:has(input:checked) {
+    background: var(--tt-yellow);
+    font-weight: bold;
+}
+.gb-radio-pill input {
+    accent-color: var(--tt-red);
+    width: 13px;
+    height: 13px;
+}
+.gb-subpanel {
+    background: #c5dece;
+    border: 2px dashed var(--border-black);
+    padding: 8px;
+    margin-bottom: 9px;
+}
+.hint-text {
+    font-size: 7px;
+    color: #2f4f3a;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+/* ============================================================================
+   VIEW 3: SUPER PADEL DX 2v2 GAME SCREEN & HALL OF FAME
+   ============================================================================ */
+.game-hud-bar {
+    width: 100%;
+    background: var(--shell-dark);
+    border: 3px solid var(--border-black);
+    color: var(--tt-white);
+    padding: 5px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 8px;
+    margin-bottom: 6px;
+}
+.score-pill {
+    color: var(--tt-yellow);
+}
+.canvas-wrapper {
+    position: relative;
+    border: 4px solid var(--border-black);
+    background: #1d5c96;
+    box-shadow: 0 4px 0 var(--border-black);
+    width: 100%;
+    max-width: 328px;
+    aspect-ratio: 320 / 350;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+#padel-canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    display: block;
+}
+
+/* Match End Overlay inside Canvas */
+.match-over-modal {
+    position: absolute;
+    inset: 12px;
+    background: rgba(16, 20, 29, 0.95);
+    border: 4px solid var(--tt-yellow);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    text-align: center;
+    color: var(--tt-white);
+    z-index: 20;
+}
+.match-over-modal.active {
+    display: flex;
+}
+
+.controls-legend {
+    width: 100%;
+    font-size: 7px;
+    text-align: center;
+    color: var(--lcd-ink);
+    margin-top: 5px;
+    line-height: 1.5;
+}
+
+/* Hall of Fame Mini-Board */
+.hof-board {
+    width: 100%;
+    background: #dfeee4;
+    border: 3px solid var(--border-black);
+    padding: 8px;
+    margin-top: 8px;
+    color: var(--border-black);
+}
+.hof-title {
+    font-size: 8px;
+    background: var(--shell-dark);
+    color: var(--tt-yellow);
+    padding: 5px;
+    text-align: center;
+    margin-bottom: 6px;
+}
+.hof-list {
+    max-height: 140px;
+    overflow-y: auto;
+    font-size: 7px;
+}
+.hof-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 2px;
+    border-bottom: 1px dashed #7a9985;
+}
+
+/* ============================================================================
+   POKÉMON FLOATING TOAST DIALOGUE INSIDE LCD
+   ============================================================================ */
+.poke-toast {
+    position: sticky;
+    bottom: 2px;
+    left: 0;
+    right: 0;
+    width: 98%;
+    margin: 6px auto 0;
+    background: #f4f7f0;
+    border: 3px solid var(--border-black);
+    box-shadow: 0 3px 0 var(--border-black);
+    padding: 7px 9px;
+    font-size: 7.5px;
+    line-height: 1.5;
+    color: var(--border-black);
+    z-index: 35;
+    display: none;
+}
+.poke-toast.visible {
+    display: block;
+}
+
+/* ============================================================================
+   CENTER DUAL LED INDICATORS (RED & GREEN)
+   ============================================================================ */
+.leds-center-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+}
+.pixel-led {
+    width: 14px;
+    height: 16px;
+    border: 3px solid var(--border-black);
+    border-radius: 3px;
+    position: relative;
+}
+.pixel-led::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 3px;
+    height: 3px;
+    background: #ffffff;
+}
+.pixel-led.red {
+    background: var(--tt-red);
+    box-shadow: 0 0 8px rgba(211, 54, 54, 0.85);
+}
+.pixel-led.green {
+    background: var(--tt-green);
+    box-shadow: 0 0 8px rgba(107, 201, 71, 0.85);
+}
+.pixel-led.pulse {
+    animation: led-flash 0.25s steps(2) infinite;
+}
+@keyframes led-flash {
+    50% { filter: brightness(1.8); transform: scale(1.1); }
+}
+
+/* ============================================================================
+   BOLTED CONTROL PANELS (D-PAD LEFT + 3 ARCADE BUTTONS RIGHT)
+   ============================================================================ */
+.controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.control-plate {
+    background: var(--shell-bg);
+    border: 4px solid var(--border-black);
+    border-radius: 8px;
+    box-shadow:
+        inset 3px 3px 0 var(--shell-light),
+        inset -3px -3px 0 var(--shell-dark);
+    padding: 14px 10px;
+    position: relative;
+    min-height: 155px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.plate-screw {
+    width: 10px;
+    height: 10px;
+    background: #77849e;
+    border: 2px solid var(--border-black);
+    border-radius: 50%;
+    position: absolute;
+}
+.plate-screw.tl { top: 6px; left: 6px; }
+.plate-screw.tr { top: 6px; right: 6px; }
+.plate-screw.bl { bottom: 6px; left: 6px; }
+.plate-screw.br { bottom: 6px; right: 6px; }
+
+/* LEFT PLATE: YELLOW 4-WAY D-PAD + "live Dj Set" */
+.dpad-cluster {
+    position: relative;
+    width: 136px;
+    height: 126px;
+}
+.dpad-btn {
+    position: absolute;
+    width: 36px;
+    height: 32px;
+    background: var(--tt-yellow);
+    border: 3px solid var(--border-black);
+    box-shadow: inset 2px 2px 0 #ffe27a, 0 3px 0 var(--border-black);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--border-black);
+    border-radius: 5px;
+    touch-action: none;
+}
+.dpad-btn:active,
+.dpad-btn.pressed {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--border-black);
+    background: #ffd952;
+}
+.dpad-up    { top: 0; left: 50px; }
+.dpad-down  { bottom: 0; left: 50px; }
+.dpad-left  { top: 47px; left: 2px; }
+.dpad-right { top: 47px; right: 2px; }
+
+.dpad-center-label {
+    position: absolute;
+    top: 45px;
+    left: 38px;
+    width: 60px;
+    text-align: center;
+    font-size: 9px;
+    line-height: 1.35;
+    pointer-events: none;
+    text-shadow: 2px 2px 0 var(--border-black);
+}
+.dpad-center-label .live-word { color: var(--tt-lime); display: block; }
+.dpad-center-label .dj-word   { color: var(--tt-yellow); display: block; }
+
+/* RIGHT PLATE: 3 ROUND PIXEL BUTTONS + POSTER LABELS */
+.action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    padding: 0 8px;
+}
+.action-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.arcade-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid var(--border-black);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    box-shadow: 0 4px 0 var(--border-black);
+    touch-action: none;
+}
+.arcade-btn::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 5px;
+    width: 6px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 50%;
+}
+.arcade-btn:active,
+.arcade-btn.pressed {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--border-black);
+}
+.arcade-btn.green  { background: var(--tt-green); }
+.arcade-btn.red    { background: var(--tt-red); }
+.arcade-btn.yellow { background: var(--tt-yellow); }
+
+.action-label-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.action-main-label {
+    font-size: 10px;
+    text-shadow: 2px 2px 0 var(--border-black);
+}
+.action-main-label.green  { color: var(--tt-lime); }
+.action-main-label.red    { color: var(--tt-red); }
+.action-main-label.yellow { color: var(--tt-yellow); }
+
+.action-sub-label {
+    font-size: 6.5px;
+    color: #b4c2db;
+}
+
+/* ============================================================================
+   SHELL FOOTER: TAGLINE, VENTS, ADDRESS & ADMIN LINK
+   ============================================================================ */
+.soci-banner {
+    text-align: center;
+    font-size: 8.5px;
+    color: var(--tt-yellow);
+    text-shadow: 2px 2px 0 var(--border-black);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.shell-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.vents-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.vent-slot {
+    height: 9px;
+    background: var(--shell-darker);
+    border: 2px solid var(--border-black);
+    border-radius: 3px;
+    box-shadow: inset 1px 1px 0 #0d1017;
+}
+.venue-address {
+    font-size: 7.5px;
+    color: var(--tt-lime);
+    text-shadow: 1px 1px 0 var(--border-black);
+    line-height: 1.65;
+}
+
+.shell-footer-note {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 14px;
+    font-size: 7.5px;
+}
+.prenotazione-tag {
+    color: var(--tt-red);
+    text-shadow: 1px 1px 0 var(--border-black);
+    letter-spacing: 1px;
+}
+.admin-secret-link {
+    color: #7d8ca8;
+    text-decoration: none;
+    font-size: 7px;
+}
+.admin-secret-link:hover {
+    color: var(--tt-yellow);
+}
+
+@keyframes blink-anim {
+    50% { opacity: 0; }
+}
+
+@media (max-width: 440px) {
+    .gbc-shell { padding: 16px 12px 14px; }
+    .rebrunch-word { font-size: 20px; }
+    .event-day, .event-date-num { font-size: 16px; }
+    .action-main-label { font-size: 8.5px; }
+}
