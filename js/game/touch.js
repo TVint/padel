@@ -1,4 +1,4 @@
-// js/game/touch.js - Ergonomic 40% Larger D-Pad, Colored Buttons & GIOCA Button Controller
+// js/game/touch.js - GBC Input Controller with Event Mode vs Game Mode (Tasto A / Tasto B / Dash)
 
 import { sound } from './audio.js';
 
@@ -9,14 +9,31 @@ export class GBCInputController {
       down: false,
       left: false,
       right: false,
-      actionA: false,   // Green / Red (Charge & Drive / Power Shot)
-      actionB: false,   // Yellow (Lob / Dive)
-      start: false,     // GIOCA button
+      actionA: false,    // Green Button in Game Mode: Tasto A (Shot / Charge)
+      actionB: false,    // Red Button in Game Mode: Tasto B (Lob / Pallonetto)
+      actionDash: false, // Yellow Button in Game Mode: Dash (Sprint / Dive)
+      start: false,      // GIOCA / ESCI button
     };
 
-    this.onButtonPress = null; // Callback for UI navigation & click tracking
+    this.onButtonPress = null;
+    this.dpadSequence = [];
+    this.onSecretSequence = null;
+
     this._bindKeyboard();
     this._bindShellButtons();
+  }
+
+  _recordDpad(dir) {
+    this.dpadSequence.push(dir);
+    if (this.dpadSequence.length > 6) {
+      this.dpadSequence.shift();
+    }
+    // Secret D-Pad combo: UP, UP, DOWN, DOWN
+    const tail = this.dpadSequence.slice(-4).join(',');
+    if (tail === 'UP,UP,DOWN,DOWN' && typeof this.onSecretSequence === 'function') {
+      this.dpadSequence = [];
+      this.onSecretSequence();
+    }
   }
 
   _bindKeyboard() {
@@ -29,12 +46,14 @@ export class GBCInputController {
       switch (e.code) {
         case 'ArrowUp':
         case 'KeyW':
+          if (!this.keys.up) this._recordDpad('UP');
           this.keys.up = true;
           this._highlight('btn-up', true);
           e.preventDefault();
           break;
         case 'ArrowDown':
         case 'KeyS':
+          if (!this.keys.down) this._recordDpad('DOWN');
           this.keys.down = true;
           this._highlight('btn-down', true);
           e.preventDefault();
@@ -53,16 +72,23 @@ export class GBCInputController {
           break;
         case 'Space':
         case 'KeyK':
-          if (!this.keys.actionA) this._triggerCallback('A');
+          if (!this.keys.actionA) this._triggerCallback('GREEN');
           this.keys.actionA = true;
-          this._highlight('btn-red', true);
+          this._highlight('btn-green', true);
           e.preventDefault();
           break;
         case 'KeyZ':
-        case 'KeyX':
         case 'KeyJ':
-          if (!this.keys.actionB) this._triggerCallback('B');
+          if (!this.keys.actionB) this._triggerCallback('RED');
           this.keys.actionB = true;
+          this._highlight('btn-red', true);
+          e.preventDefault();
+          break;
+        case 'KeyX':
+        case 'ShiftLeft':
+        case 'ShiftRight':
+          if (!this.keys.actionDash) this._triggerCallback('YELLOW');
+          this.keys.actionDash = true;
           this._highlight('btn-yellow', true);
           e.preventDefault();
           break;
@@ -100,12 +126,17 @@ export class GBCInputController {
         case 'Space':
         case 'KeyK':
           this.keys.actionA = false;
-          this._highlight('btn-red', false);
+          this._highlight('btn-green', false);
           break;
         case 'KeyZ':
-        case 'KeyX':
         case 'KeyJ':
           this.keys.actionB = false;
+          this._highlight('btn-red', false);
+          break;
+        case 'KeyX':
+        case 'ShiftLeft':
+        case 'ShiftRight':
+          this.keys.actionDash = false;
           this._highlight('btn-yellow', false);
           break;
         case 'Enter':
@@ -121,25 +152,41 @@ export class GBCInputController {
       const el = document.getElementById(id);
       if (!el) return;
 
+      let pointerActive = false;
+
       const press = (e) => {
-        e.preventDefault();
+        if (e && e.cancelable && e.type !== 'click') e.preventDefault();
+        pointerActive = true;
         sound.btnClick();
-        if (navigator.vibrate) navigator.vibrate(14);
+        if (navigator.vibrate) {
+          try { navigator.vibrate(14); } catch (_) {}
+        }
         this.keys[keyProp] = true;
         el.classList.add('pressed');
+        if (codeName === 'UP' || codeName === 'DOWN') {
+          this._recordDpad(codeName);
+        }
         this._triggerCallback(codeName);
       };
 
       const release = (e) => {
-        e.preventDefault();
+        if (e && e.cancelable && e.type !== 'click') e.preventDefault();
         this.keys[keyProp] = false;
         el.classList.remove('pressed');
+        setTimeout(() => { pointerActive = false; }, 80);
       };
 
       el.addEventListener('pointerdown', press);
       el.addEventListener('pointerup', release);
       el.addEventListener('pointerleave', release);
       el.addEventListener('pointercancel', release);
+
+      // Support mouse click / synthetic click / accessibility
+      el.addEventListener('click', (e) => {
+        if (pointerActive) return;
+        press(e);
+        setTimeout(() => release(e), 120);
+      });
     };
 
     bindHold('btn-up', 'up', 'UP');
@@ -148,14 +195,13 @@ export class GBCInputController {
     bindHold('btn-right', 'right', 'RIGHT');
 
     // 3 Colored Shell Buttons:
-    // - RED: Aperitivo view (or Power Shot inside match)
-    // - GREEN: Brunch view (or Drive Shot inside match)
-    // - YELLOW: Torneo view (or Lob/Dive inside match)
-    bindHold('btn-red', 'actionA', 'RED');
+    // Event Mode: GREEN=Brunch, RED=Aperitivo, YELLOW=Torneo
+    // Game Mode:  GREEN=Tasto A (Tiro/Carica), RED=Tasto B (Lob), YELLOW=Dash (Scatto/Tuffo)
     bindHold('btn-green', 'actionA', 'GREEN');
-    bindHold('btn-yellow', 'actionB', 'YELLOW');
+    bindHold('btn-red', 'actionB', 'RED');
+    bindHold('btn-yellow', 'actionDash', 'YELLOW');
 
-    // Single Large Horizontal GIOCA Button
+    // Horizontal Button: GIOCA (Event Mode) <-> ESCI (Game Mode)
     bindHold('btn-play-game', 'start', 'GIOCA');
   }
 

@@ -1,7 +1,7 @@
-/* css/retro.css - REBRUNCH // Republic Sport Village - Reference Poster Style + 3 Skins (Classica / Uomo / Donna) */
+/* css/retro.css - REBRUNCH // Republic Sport Village - Static GitHub Pages GBC UI (Event Mode & Game Mode) */
 
 :root {
-  /* SKIN 1: CLASSICA (Exact Slate Blue-Grey from Attached Reference Poster) */
+  /* SKIN 1: CLASSICA (Exact Slate Blue-Grey from Reference Poster) */
   --shell-bg-top: #3e4760;
   --shell-bg-main: #353d54;
   --shell-bg-bot: #2b3246;
@@ -21,7 +21,7 @@
   --lcd-sage-top: #538467;
   --lcd-sage-bot: #477459;
 
-  /* Accent Colors from Reference Poster */
+  /* Accent Colors */
   --rep-yellow: #f7c11e;
   --rep-lime: #9ad932;
   --rep-red: #e53935;
@@ -40,7 +40,6 @@ body[data-skin="uomo"],
   --shell-bevel-light: #a3e635;
   --shell-bevel-dark: #365314;
 
-  --lens-bg-top: #2ec40022;
   --lens-bg-top: #263815;
   --lens-bg-bot: #18240c;
   --lens-border: #0c1405;
@@ -92,7 +91,7 @@ html, body {
 }
 
 /* =========================================================
-   MOBILE LANDSCAPE BLOCKER OVERLAY (HIGH Z-INDEX)
+   MOBILE LANDSCAPE BLOCKER OVERLAY
    ========================================================= */
 #landscape-overlay {
   display: none;
@@ -146,7 +145,7 @@ html, body {
 }
 
 /* =========================================================
-   GAME BOY SHELL (CLASSIC SLATE / UOMO PEA GREEN / DONNA PINK)
+   GAME BOY SHELL
    ========================================================= */
 .gbc-shell {
   width: 100%;
@@ -187,7 +186,7 @@ html, body {
   100% { opacity: 1; }
 }
 
-/* 4 Pixel Corner Screws on Outer Shell */
+/* 4 Pixel Corner Screws */
 .shell-screw {
   position: absolute;
   width: 10px;
@@ -240,7 +239,6 @@ html, body {
   letter-spacing: 0.3px;
 }
 
-/* Masculine Stickers (Pea Green Skin) */
 .st-u1 {
   top: 445px;
   left: 10px;
@@ -270,7 +268,6 @@ html, body {
   transform: rotate(5deg);
 }
 
-/* Feminine Glitter Stickers (Shocking Pink Skin) */
 .glitter-badge {
   background: linear-gradient(135deg, #fdf2f8 0%, #f472b6 45%, #fde047 100%);
   color: #831843;
@@ -302,7 +299,7 @@ html, body {
 }
 
 /* =========================================================
-   SLIM NON-INVASIVE SKIN SWITCHER BAR (REPLACES BATTERY BAND)
+   SLIM NON-INVASIVE SKIN & AUDIO MENU BAR
    ========================================================= */
 .slim-skin-bar {
   position: relative;
@@ -311,7 +308,7 @@ html, body {
   justify-content: space-between;
   align-items: center;
   gap: 4px;
-  background: rgba(12, 15, 23, 0.78);
+  background: rgba(12, 15, 23, 0.82);
   border: 2px solid var(--shell-border);
   border-radius: 6px;
   padding: 4px 6px;
@@ -322,25 +319,17 @@ html, body {
   display: flex;
   align-items: center;
   gap: 3px;
-  flex-wrap: nowrap;
-}
-
-.skin-lbl {
-  font-size: 5.5px;
-  color: #cbd5e1;
-  margin-right: 2px;
 }
 
 .skin-btn {
   font-family: 'Press Start 2P', monospace;
-  font-size: 5.5px;
+  font-size: 5px;
   padding: 4px 5px;
   background: #1e293b;
   color: #cbd5e1;
   border: 2px solid #334155;
   border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.1s, background 0.15s;
 }
 
 .skin-btn.active {
@@ -350,10 +339,6 @@ html, body {
   box-shadow: 0 2px 0 #000;
 }
 
-.skin-btn:active {
-  transform: translateY(1px);
-}
-
 .slim-utils {
   display: flex;
   gap: 3px;
@@ -361,17 +346,22 @@ html, body {
 
 .mini-bezel-btn {
   background: #0f172a;
-  color: var(--rep-yellow);
+  color: #94a3b8;
   border: 1px solid #475569;
   font-family: 'Press Start 2P', monospace;
-  font-size: 5.5px;
+  font-size: 5px;
   padding: 4px 5px;
   border-radius: 3px;
   cursor: pointer;
 }
 
+.mini-bezel-btn.active {
+  color: var(--rep-lime);
+  border-color: var(--rep-lime);
+}
+
 /* =========================================================
-   METALLIC BEVELED SCREEN FRAME (MATCHING REFERENCE)
+   METALLIC BEVELED SCREEN FRAME & LCD VIEWPORT
    ========================================================= */
 .gbc-lens {
   position: relative;
@@ -386,9 +376,6 @@ html, body {
     0 3px 0 rgba(255, 255, 255, 0.14);
 }
 
-/* =========================================================
-   CENTRAL SAGE-GREEN RETRO LCD VIEWPORT (FULL WIDTH)
-   ========================================================= */
 .lcd-screen {
   width: 100%;
   height: 392px;
@@ -405,17 +392,6 @@ html, body {
   scrollbar-color: #1e293b #477459;
 }
 
-.lcd-screen::-webkit-scrollbar {
-  width: 5px;
-}
-.lcd-screen::-webkit-scrollbar-track {
-  background: #477459;
-}
-.lcd-screen::-webkit-scrollbar-thumb {
-  background: #111827;
-}
-
-/* Horizontal Scanlines matching Reference Poster */
 .lcd-screen.scanlines::after {
   content: "";
   position: absolute;
@@ -431,7 +407,6 @@ html, body {
   z-index: 30;
 }
 
-/* Hardware Volume OSD */
 .volume-osd {
   position: absolute;
   top: 8px;
@@ -481,10 +456,10 @@ html, body {
   text-align: center;
 }
 
-/* Republic Sport Village Logo matching Reference */
 .republic-brand {
   margin-top: 2px;
   line-height: 1;
+  cursor: pointer;
 }
 
 .republic-word {
@@ -507,7 +482,6 @@ html, body {
   text-shadow: 1px 2px 0 #101814;
 }
 
-/* DOMENICA 29 NOVEMBRE dalle ore 10:00 alle 14:30 */
 .poster-date-block {
   margin: 6px 0 4px;
   display: flex;
@@ -546,13 +520,13 @@ html, body {
   margin-top: 1px;
 }
 
-/* Transparent Pixel Art Illustration + REBRUNCH + Eat. Play. Repeat. */
 .poster-hero-art {
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   margin-top: auto;
+  cursor: pointer;
 }
 
 .rebrunch-hero-img {
@@ -572,12 +546,12 @@ html, body {
 }
 
 /* =========================================================
-   VIEWS 2, 3, 4: BRUNCH (GREEN), APERITIVO (RED), TORNEO (YELLOW)
+   VIEWS 2, 3, 4, 6: BRUNCH, APERITIVO CHILL, TORNEO, ADMIN
    ========================================================= */
 .lcd-card-view {
   flex: 1;
   min-height: 100%;
-  padding: 7px 8px;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -587,11 +561,14 @@ html, body {
 .lcd-card-view.theme-green {
   background: linear-gradient(180deg, #1d4d35 0%, #113022 100%);
 }
-.lcd-card-view.theme-red {
-  background: linear-gradient(180deg, #2b0918 0%, #4c0519 60%, #111520 100%);
+.lcd-card-view.theme-chill-sunny {
+  background: linear-gradient(180deg, #0284c7 0%, #38bdf8 55%, #15803d 100%);
 }
 .lcd-card-view.theme-yellow {
   background: linear-gradient(180deg, #3b250b 0%, #1f1710 100%);
+}
+.lcd-card-view.theme-admin {
+  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
 }
 
 .card-view-header {
@@ -600,28 +577,28 @@ html, body {
   align-items: center;
   background: #111520;
   border: 2px solid var(--rep-yellow);
-  padding: 6px 8px;
-  font-size: 8px;
+  padding: 5px 8px;
+  font-size: 7.5px;
   color: var(--rep-yellow);
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .lcd-back-btn {
   font-family: 'Press Start 2P', monospace;
-  font-size: 6.5px;
-  padding: 4px 6px;
+  font-size: 6px;
+  padding: 3px 6px;
   background: var(--rep-red);
   color: #fff;
   border: 2px solid #fff;
   cursor: pointer;
 }
 
-/* GREEN VIEW: BRUNCH ORDERED LIST */
+/* GREEN VIEW: BRUNCH ORDERED LIST + DANIELE WHATSAPP CTA */
 .brunch-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2.5px;
   flex: 1;
 }
 
@@ -631,46 +608,71 @@ html, body {
   gap: 8px;
   background: rgba(17, 21, 32, 0.88);
   border: 2px solid var(--rep-lime);
-  padding: 4px 8px;
-  font-size: 7.5px;
+  padding: 3px 7px;
+  font-size: 7px;
   color: #f0fdf4;
   box-shadow: 2px 2px 0 #000;
 }
 
 .brunch-list .px-icon {
-  font-size: 11px;
-  width: 18px;
+  font-size: 10px;
+  width: 16px;
   text-align: center;
 }
 
-.card-view-footer {
+.brunch-cta-box {
   margin-top: 5px;
-  font-size: 6px;
+  background: rgba(9, 13, 22, 0.9);
+  border: 2px solid var(--rep-yellow);
+  padding: 5px 6px;
   text-align: center;
-  color: var(--rep-yellow);
-  padding: 5px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px dashed var(--rep-lime);
 }
 
-/* RED VIEW: APERITIVO DJ SET + Y2K MARQUEE */
-.dj-set-banner {
-  background: var(--rep-red);
-  color: #ffffff;
+.brunch-cta-text {
+  font-size: 6px;
+  color: var(--rep-yellow);
+  margin-bottom: 4px;
+}
+
+.wa-daniele-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 6px;
+  background: #22c55e;
+  color: #052e16;
+  border: 2px solid #ffffff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6.5px;
+  text-decoration: none;
+  box-shadow: 0 3px 0 #000;
+}
+.wa-daniele-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #000;
+}
+
+/* RED VIEW: CHILL SUNNY AFTERNOON APERITIVO & MORNING SET MARQUEE */
+.morning-marquee-wrap {
+  background: #0f172a;
   border: 2px solid var(--rep-yellow);
-  padding: 5px;
-  text-align: center;
-  font-size: 8px;
+  padding: 4px;
   margin-bottom: 5px;
   box-shadow: 2px 2px 0 #000;
 }
 
+.morning-marquee {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7.5px;
+  color: var(--rep-yellow);
+  letter-spacing: 0.8px;
+}
+
 .dj-stage-wrap {
-  border: 3px solid #f43f5e;
-  background: #090a10;
+  border: 3px solid #fef08a;
+  background: #38bdf8;
   box-shadow: 3px 3px 0 #000;
   line-height: 0;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 #dj-canvas {
@@ -680,21 +682,16 @@ html, body {
   image-rendering: pixelated;
 }
 
-.y2k-marquee-box {
-  background: #000000;
-  border: 2px solid var(--rep-cyan);
+.sunny-caption {
+  background: rgba(15, 23, 42, 0.88);
+  border: 2px solid var(--rep-lime);
   padding: 5px 4px;
-  box-shadow: 2px 2px 0 #000;
+  text-align: center;
+  font-size: 6px;
+  color: #fef08a;
 }
 
-.y2k-marquee {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 7.5px;
-  color: var(--rep-yellow);
-  letter-spacing: 1px;
-}
-
-/* YELLOW VIEW: TORNEO WHATSAPP 8-BIT */
+/* YELLOW VIEW: TORNEO WHATSAPP 8-BIT (MIRKO 1st, MARIO 2nd) */
 .torneo-body {
   flex: 1;
   display: flex;
@@ -702,10 +699,10 @@ html, body {
   justify-content: center;
   align-items: center;
   text-align: center;
-  gap: 12px;
+  gap: 10px;
   background: rgba(17, 21, 32, 0.85);
   border: 3px solid var(--rep-yellow);
-  padding: 14px 10px;
+  padding: 12px 10px;
   box-shadow: 3px 3px 0 #000;
 }
 
@@ -721,13 +718,14 @@ html, body {
 }
 .torneo-copy strong {
   color: var(--rep-lime);
+  font-size: 9.5px;
 }
 
 .wa-big-btn {
   width: 100%;
-  padding: 12px 10px;
+  padding: 10px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
+  font-size: 8.5px;
   background: #22c55e;
   color: #052e16;
   border: 3px solid #ffffff;
@@ -744,7 +742,7 @@ html, body {
   width: 100%;
   flex-direction: column;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .wa-submenu.open {
   display: flex;
@@ -764,10 +762,12 @@ html, body {
 }
 
 /* =========================================================
-   VIEW 5: SUPER PADEL DX 2V2 + C64 CROWD + HALL OF FAME
+   VIEW 5: SUPER PADEL DX 2V2 (FULL LCD VIEWPORT + PAUSE MENU)
    ========================================================= */
 #view-game {
-  background: #0f172a;
+  background: #111520;
+  height: 100%;
+  overflow: hidden;
 }
 
 .lcd-game-hud {
@@ -776,9 +776,10 @@ html, body {
   align-items: center;
   background: #111520;
   color: #f8fafc;
-  padding: 5px 6px;
+  padding: 4px 6px;
   border-bottom: 2px solid var(--rep-yellow);
   font-size: 7px;
+  height: 36px;
 }
 
 .hud-team {
@@ -798,49 +799,50 @@ html, body {
   gap: 2px;
 }
 .shot-badge {
-  font-size: 6px;
+  font-size: 5.5px;
   color: #4ade80;
 }
-.hud-home-link {
+.hud-pause-btn {
   font-family: 'Press Start 2P', monospace;
-  font-size: 5px;
-  padding: 2px 4px;
-  background: #334155;
-  color: #f8fafc;
-  border: 1px solid #94a3b8;
+  font-size: 5.5px;
+  padding: 2px 6px;
+  background: var(--rep-yellow);
+  color: #090d16;
+  border: 1px solid #ffffff;
   cursor: pointer;
 }
 
 .canvas-holder {
   position: relative;
   width: 100%;
-  background: #1e293b;
+  flex: 1;
+  background: #1b2436;
   line-height: 0;
 }
 
 #game-canvas {
   width: 100%;
-  height: auto;
+  height: 348px;
   display: block;
   image-rendering: pixelated;
 }
 
-/* Match Over Arcade Form Modal */
+/* LCD Modals (Pause Menu, Match Over, Secret Admin Login) */
 .lcd-modal {
   position: absolute;
   inset: 0;
-  background: rgba(9, 13, 22, 0.92);
+  background: rgba(9, 13, 22, 0.94);
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px;
-  z-index: 25;
+  padding: 8px;
+  z-index: 35;
 }
 
 .modal-box {
   background: #1e293b;
   border: 3px solid var(--rep-yellow);
-  padding: 12px 10px;
+  padding: 10px 8px;
   text-align: center;
   color: #fff;
   width: 100%;
@@ -848,22 +850,84 @@ html, body {
 }
 
 .modal-box h4 {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--rep-yellow);
   margin-bottom: 6px;
 }
 
 .modal-box p {
-  font-size: 8px;
+  font-size: 7px;
   color: var(--rep-cyan);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+}
+
+/* In-Game Pause Menu Styling */
+.pause-menu-box {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pause-section {
+  background: #0f172a;
+  border: 2px solid #334155;
+  padding: 6px;
+  text-align: left;
+}
+
+.pause-sec-title {
+  font-size: 6px;
+  color: var(--rep-lime);
+  margin-bottom: 5px;
+}
+
+.pause-btn-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pause-opt-btn {
+  flex: 1;
+  min-width: 62px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5.5px;
+  padding: 5px 4px;
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 2px solid #475569;
+  cursor: pointer;
+  text-align: center;
+}
+
+.pause-opt-btn.active {
+  background: var(--rep-yellow);
+  color: #090d16;
+  border-color: #ffffff;
+}
+
+.pause-leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 78px;
+  overflow-y: auto;
+}
+
+.pause-lb-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 6px;
+  padding: 3px 5px;
+  background: #1e293b;
+  border-left: 2px solid var(--rep-yellow);
 }
 
 .arcade-score-form {
   background: #090d16;
   border: 2px solid #334155;
   padding: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .arcade-score-form label {
@@ -879,12 +943,12 @@ html, body {
   justify-content: center;
 }
 
-#arcade-name-input {
-  width: 110px;
+#arcade-name-input,
+#admin-password-input {
+  width: 135px;
   padding: 6px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  text-transform: uppercase;
+  font-size: 8.5px;
   text-align: center;
   background: #16192b;
   color: var(--rep-yellow);
@@ -892,9 +956,9 @@ html, body {
 }
 
 .arcade-save-feedback {
-  font-size: 6.5px;
+  font-size: 6px;
   color: #4ade80;
-  margin-top: 6px;
+  margin-top: 5px;
   min-height: 10px;
 }
 
@@ -907,8 +971,8 @@ html, body {
 .lcd-btn-primary,
 .lcd-btn-secondary {
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  padding: 7px 9px;
+  font-size: 6.5px;
+  padding: 6px 8px;
   cursor: pointer;
   border: 2px solid #090d16;
 }
@@ -921,70 +985,83 @@ html, body {
   color: #082f49;
 }
 
-.game-controls-hint {
+/* =========================================================
+   VIEW 6: HIDDEN ADMIN DASHBOARD INSIDE LCD
+   ========================================================= */
+.admin-lcd-section {
+  background: rgba(9, 13, 22, 0.85);
+  border: 2px solid #334155;
+  padding: 6px;
+  margin-bottom: 6px;
   display: flex;
-  justify-content: space-between;
-  background: #111520;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-sec-title {
+  font-size: 6.5px;
   color: var(--rep-yellow);
-  font-size: 5.5px;
-  padding: 5px 6px;
-  border-top: 2px solid #090d16;
-  border-bottom: 2px solid #090d16;
-}
-
-/* HALL OF FAME */
-.hall-of-fame {
-  background: #0f172a;
-  color: #f8fafc;
-  padding: 8px 6px 12px;
-}
-
-.hof-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 7.5px;
-  color: var(--rep-yellow);
-  margin-bottom: 6px;
 }
 
-.hof-refresh {
-  background: #1e293b;
-  color: var(--rep-cyan);
-  border: 1px solid var(--rep-cyan);
+.admin-mini-btn {
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  padding: 2px 5px;
+  font-size: 5px;
+  padding: 3px 5px;
+  background: var(--rep-red);
+  color: #fff;
+  border: 1px solid #fff;
   cursor: pointer;
 }
 
-.hof-list {
-  display: flex;
-  flex-direction: column;
+.admin-heatmap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 4px;
-  max-height: 115px;
-  overflow-y: auto;
 }
 
-.hof-item {
-  background: #1e293b;
-  border-left: 3px solid var(--rep-lime);
+.admin-heat-card {
+  background: #16192b;
+  border: 2px solid #475569;
   padding: 5px 6px;
-  font-size: 6.5px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 6px;
 }
 
-.hof-empty {
+.admin-scores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 155px;
+  overflow-y: auto;
+}
+
+.admin-score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #16192b;
+  border-left: 3px solid var(--rep-lime);
+  padding: 4px 6px;
   font-size: 6px;
-  color: #64748b;
-  text-align: center;
-  padding: 8px;
+}
+
+.admin-del-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5.5px;
+  padding: 2px 4px;
+  background: var(--rep-red);
+  color: #fff;
+  border: 1px solid #000;
+  cursor: pointer;
 }
 
 /* =========================================================
-   TWIN CENTER LEDS UNDER SCREEN (EXACT MATCH TO POSTER)
+   TWIN CENTER LEDS UNDER SCREEN
    ========================================================= */
 .center-leds-row {
   display: flex;
@@ -994,6 +1071,7 @@ html, body {
   margin: 7px 0;
   position: relative;
   z-index: 5;
+  cursor: pointer;
 }
 
 .px-led {
@@ -1015,7 +1093,7 @@ html, body {
 }
 
 /* =========================================================
-   TWO SCREWED CONTROL PANELS (EXACT MATCH TO POSTER)
+   TWO SCREWED CONTROL PANELS & 8-BIT GAME MODE BUTTON MORPH
    ========================================================= */
 .gbc-controls-deck {
   display: grid;
@@ -1054,7 +1132,7 @@ html, body {
 .ps-bl { bottom: 5px; left: 5px; }
 .ps-br { bottom: 5px; right: 5px; }
 
-/* LEFT PLATE: YELLOW PIXEL D-PAD + "live Dj Set" */
+/* LEFT PLATE: YELLOW PIXEL D-PAD */
 .dpad-wrapper {
   width: 126px;
   height: 120px;
@@ -1123,33 +1201,36 @@ html, body {
   text-shadow: 1px 2px 0 #0b0e14;
 }
 
-/* RIGHT PLATE: 3 PIXEL-ART COLORED BUTTONS + LABELS */
+/* RIGHT PLATE: 3 PIXEL-ART COLORED BUTTONS + 8-BIT FLIP ANIMATION */
 .color-buttons-list {
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 10px;
   width: 100%;
-  padding: 2px 6px 2px 10px;
+  padding: 2px 4px 2px 8px;
 }
 
 .color-btn-row {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
 }
 
 .round-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 3px solid #0b0e14;
   cursor: pointer;
   flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   box-shadow:
     inset 2px 2px 0 rgba(255, 255, 255, 0.55),
     0 3px 0 #0b0e14;
-  transition: transform 0.06s;
+  transition: transform 0.12s steps(4);
   touch-action: manipulation;
 }
 
@@ -1157,6 +1238,36 @@ html, body {
 .round-btn.pressed {
   transform: translateY(2px);
   box-shadow: 0 1px 0 #0b0e14;
+}
+
+.btn-game-glyph {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #000;
+  opacity: 0;
+  transform: scale(0.4) rotate(-90deg);
+  transition: opacity 0.18s steps(3), transform 0.22s steps(4);
+  pointer-events: none;
+}
+
+/* When in Game Mode, show A / B / ⚡ glyphs inside the physical buttons */
+.gbc-shell[data-app-mode="game"] .btn-game-glyph {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+/* 8-Bit CSS Spin/Morph Keyframe when transitioning between Event Mode and Game Mode */
+@keyframes btnModeFlip8Bit {
+  0%   { transform: rotateY(0deg) scale(1); }
+  40%  { transform: rotateY(90deg) scale(1.18); }
+  75%  { transform: rotateY(180deg) scale(1.08); }
+  100% { transform: rotateY(360deg) scale(1); }
+}
+
+.mode-switching .round-btn,
+.mode-switching .btn-side-label {
+  animation: btnModeFlip8Bit 0.38s steps(5) forwards;
 }
 
 .btn-green {
@@ -1170,10 +1281,10 @@ html, body {
 }
 
 .btn-side-label {
-  font-size: 8.5px;
+  font-size: 8px;
   cursor: pointer;
   text-shadow: 1px 2px 0 #0b0e14;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .lbl-green  { color: var(--rep-lime); }
@@ -1181,7 +1292,7 @@ html, body {
 .lbl-yellow { color: var(--rep-yellow); }
 
 /* =========================================================
-   LOWER POSTER TEXT, SPEAKER SLOTS & GIOCA BUTTON
+   LOWER POSTER TEXT, SPEAKER SLOTS & GIOCA / ESCI BUTTON
    ========================================================= */
 .open-invite-line {
   position: relative;
@@ -1203,7 +1314,6 @@ html, body {
   align-items: center;
 }
 
-/* 3 Horizontal Dark Recessed Speaker Slots matching Reference */
 .horiz-speaker-grille {
   display: flex;
   flex-direction: column;
@@ -1246,6 +1356,14 @@ html, body {
     inset 0 2px 0 rgba(255, 255, 255, 0.45),
     0 3px 0 #0b0e14;
   touch-action: manipulation;
+  transition: background 0.15s;
+}
+
+/* When in Game Mode, horizontal button becomes "ESCI" in Slate/Amber style */
+.gbc-shell[data-app-mode="game"] .btn-gioca-main {
+  background: linear-gradient(180deg, #475569 0%, #1e293b 70%, #0f172a 100%);
+  border-color: var(--rep-yellow);
+  color: var(--rep-yellow);
 }
 
 .btn-gioca-main:active,
@@ -1280,24 +1398,8 @@ html, body {
   margin-top: 8px;
 }
 
-/* Page Footer */
-.page-footer {
-  margin-top: 8px;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 6px;
-  color: #94a3b8;
-  padding: 0 6px;
-}
-.admin-link {
-  color: var(--rep-yellow);
-  text-decoration: none;
-}
-
 /* =========================================================
-   MOBILE PORTRAIT: FULLSCREEN HANDHELD CONSOLE (100% WIDTH & HEIGHT)
+   MOBILE PORTRAIT: FULLSCREEN HANDHELD CONSOLE
    ========================================================= */
 @media screen and (max-width: 600px) and (orientation: portrait) {
   html, body {
@@ -1329,10 +1431,6 @@ html, body {
   }
 
   .lcd-screen {
-    height: 375px;
-  }
-
-  .page-footer {
-    display: none;
+    height: 382px;
   }
 }

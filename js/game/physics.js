@@ -1,17 +1,17 @@
-// js/game/physics.js - 2.5D Padel Ball Physics (x, y, z), Wall Rebound Tracking & Linear Charge Interpolation
+// js/game/physics.js - 2.5D Padel Ball Physics (x, y, z) on Full-Screen LCD Court (320x348)
 
 import { sound } from './audio.js';
 
 export const COURT = {
   WIDTH: 320,
-  HEIGHT: 264,
-  LEFT: 38,
-  RIGHT: 282,
-  TOP: 50,
-  BOTTOM: 246,
-  NET_Y: 148,
-  SERVICE_TOP: 92,
-  SERVICE_BOTTOM: 204,
+  HEIGHT: 348,
+  LEFT: 36,
+  RIGHT: 284,
+  TOP: 54,
+  BOTTOM: 326,
+  NET_Y: 190,
+  SERVICE_TOP: 112,
+  SERVICE_BOTTOM: 268,
 };
 
 /**
@@ -24,20 +24,21 @@ export function computeChargedShotVelocity({
   charge = 0,
   dirY = -1,
   aimX = 0,
-  playerY = 212,
+  playerY = 285,
   ballZ = 10,
   isLob = false,
+  speedMultiplier = 1.0,
 }) {
   const clampedCharge = Math.max(0, Math.min(100, Number(charge) || 0));
-  const t = clampedCharge / 100; // 0.0 -> 1.0 linear interpolation factor
+  const t = clampedCharge / 100;
 
   if (isLob) {
-    const lobSpeedY = 1.95 + t * 1.05;
-    const lobVx = aimX * (1.05 + t * 1.15);
+    const lobSpeedY = (2.35 + t * 1.25) * speedMultiplier;
+    const lobVx = aimX * (1.1 + t * 1.2);
     return {
       vx: lobVx,
       vy: dirY * lobSpeedY,
-      vz: 4.85 + t * 0.85,
+      vz: 5.15 + t * 0.9,
       spin: 0,
       shotType: 'PALLONETTO!',
       isSmash: false,
@@ -45,22 +46,22 @@ export function computeChargedShotVelocity({
   }
 
   // Linearly interpolate horizontal & vertical speed from charge (0..100)
-  const minVy = 1.62;
-  const maxVy = 4.55;
+  const minVy = 2.05 * speedMultiplier;
+  const maxVy = 5.35 * speedMultiplier;
   const speedY = minVy + t * (maxVy - minVy);
 
-  const minVxScale = 0.85;
-  const maxVxScale = 2.65;
+  const minVxScale = 0.9;
+  const maxVxScale = 2.75;
   const vx = aimX * (minVxScale + t * (maxVxScale - minVxScale));
 
-  const nearNet = dirY < 0 ? playerY < COURT.NET_Y + 46 : playerY > COURT.NET_Y - 46;
+  const nearNet = dirY < 0 ? playerY < COURT.NET_Y + 58 : playerY > COURT.NET_Y - 58;
 
   // High ball near net + high charge => SMASH X3!
   if (clampedCharge >= 72 && (ballZ > 14 || nearNet)) {
     return {
-      vx: vx * 1.08,
-      vy: dirY * (speedY * 1.06),
-      vz: -1.3,
+      vx: vx * 1.1,
+      vy: dirY * (speedY * 1.08),
+      vz: -1.35,
       spin: (Math.random() - 0.5) * 0.45,
       shotType: '🔥 SMASH X3!',
       isSmash: true,
@@ -71,8 +72,8 @@ export function computeChargedShotVelocity({
   if (clampedCharge <= 25) {
     return {
       vx: vx * 0.75,
-      vy: dirY * (1.52 + t * 1.15),
-      vz: 1.92 + t * 0.55,
+      vy: dirY * (1.85 + t * 1.25) * speedMultiplier,
+      vz: 2.15 + t * 0.55,
       spin: aimX * 0.15,
       shotType: 'CHIQUITA!',
       isSmash: false,
@@ -84,7 +85,7 @@ export function computeChargedShotVelocity({
     return {
       vx,
       vy: dirY * speedY,
-      vz: 2.3 + (1 - t) * 0.45,
+      vz: 2.55 + (1 - t) * 0.45,
       spin: aimX * 0.25,
       shotType: 'BANDEJA!',
       isSmash: false,
@@ -95,7 +96,7 @@ export function computeChargedShotVelocity({
   return {
     vx,
     vy: dirY * speedY,
-    vz: 2.02,
+    vz: 2.25,
     spin: aimX * 0.35,
     shotType: '⚡ VIBORA A VETRO!',
     isSmash: false,
@@ -104,10 +105,10 @@ export function computeChargedShotVelocity({
 
 export class BallPhysics {
   constructor() {
-    this.reset(160, 214, -1);
+    this.reset(160, 286, -1);
   }
 
-  reset(x = 160, y = 214, serveDir = -1) {
+  reset(x = 160, y = 286, serveDir = -1) {
     this.x = x;
     this.y = y;
     this.z = 12;
@@ -119,13 +120,13 @@ export class BallPhysics {
     this.inPlay = false;
     this.serveDir = serveDir;
     this.bouncesOnCurrentSide = 0;
-    this.lastHitterTeam = null; // 'player' or 'cpu'
+    this.lastHitterTeam = null;
     this.isSmash = false;
     this.outOfCage = false;
     this.landingTarget = { x: x, y: y };
     this.trail = [];
-    this.lastWallHit = null;    // { x, y, wall, isMesh, timer }
-    this.lastGroundBounce = null; // { x, y, timer }
+    this.lastWallHit = null;
+    this.lastGroundBounce = null;
   }
 
   launch(vx, vy, vz, hitterTeam, isSmash = false, spin = 0) {
@@ -183,9 +184,9 @@ export class BallPhysics {
       this.vx += this.spin * 0.55;
 
       if (this.isSmash && Math.abs(this.vy) > 3.0) {
-        this.vz = 5.3;
+        this.vz = 5.4;
       } else {
-        this.vz = Math.max(1.85, Math.abs(this.vz) * 0.68);
+        this.vz = Math.max(1.9, Math.abs(this.vz) * 0.68);
       }
 
       this.vx *= 0.88;
@@ -215,7 +216,7 @@ export class BallPhysics {
       }
 
       this.x = hitLeft ? COURT.LEFT + 1 : COURT.RIGHT - 1;
-      const nearNetZone = Math.abs(this.y - COURT.NET_Y) < 38;
+      const nearNetZone = Math.abs(this.y - COURT.NET_Y) < 48;
 
       this.lastWallHit = {
         x: hitLeft ? COURT.LEFT : COURT.RIGHT,
@@ -255,7 +256,7 @@ export class BallPhysics {
 
       this.y = hitTop ? COURT.TOP + 1 : COURT.BOTTOM - 1;
       this.vy = -this.vy * 0.72;
-      this.vz = Math.max(this.vz, 1.85);
+      this.vz = Math.max(this.vz, 1.9);
       this.computeLandingPrediction();
     }
 
@@ -270,7 +271,7 @@ export class BallPhysics {
     let simVy = this.vy;
     let simVz = this.vz;
 
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 140; i++) {
       simX += simVx;
       simY += simVy;
       simZ += simVz;

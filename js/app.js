@@ -1,32 +1,185 @@
-// js/app.js - REBRUNCH // Republic Sport Village - GBC Advergame Frontend & 3-Skin Switcher
+// js/app.js - REBRUNCH // Republic Sport Village - Static GitHub Pages Controller (Event/Game Mode, LocalStorage, Sunny BGM & Secret Admin)
 
 import { sound } from './game/audio.js';
 import { GBCInputController } from './game/touch.js';
 import { PadelGameEngine } from './game/engine.js';
 
+const STORAGE_KEYS = {
+  LEADERBOARD: 'rebrunch_leaderboard_v2',
+  CLICK_STATS: 'rebrunch_click_stats_v2',
+  SKIN:        'rebrunch_gbc_skin',
+};
+
+const DEFAULT_LEADERBOARD = [
+  { id: 1, name: 'REP', score: 1250, mode: 'classic', date: '2026-11-29 10:30' },
+  { id: 2, name: 'MIR', score: 980,  mode: 'classic', date: '2026-11-29 11:00' },
+  { id: 3, name: 'MAR', score: 840,  mode: 'classic', date: '2026-11-29 11:15' },
+];
+
+const DEFAULT_CLICKS = {
+  green_brunch:  0,
+  red_aperitivo: 0,
+  yellow_torneo: 0,
+  play_game:     0,
+  wa_daniele:    0,
+  wa_mirko:      0,
+  wa_mario:      0,
+};
+
 const input = new GBCInputController();
 let gameEngine = null;
+let appMode = 'event'; // 'event' | 'game'
 let currentView = 'view-intro';
 let lastMatchScore = 0;
 let volumeOsdTimeout = null;
 
 // =========================================================
-// 1. CLICK ANALYTICS TRACKING (api/click.php)
+// 1. LOCALSTORAGE DATA LAYER (ZERO PHP FOR GITHUB PAGES)
 // =========================================================
-async function trackAreaClick(areaClicked) {
+function getStoredLeaderboard() {
   try {
-    await fetch('api/click.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ area_clicked: areaClicked }),
-    });
+    const raw = localStorage.getItem(STORAGE_KEYS.LEADERBOARD);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(DEFAULT_LEADERBOARD));
+      return [...DEFAULT_LEADERBOARD];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [...DEFAULT_LEADERBOARD];
   } catch (_) {
-    // Non-blocking analytics
+    return [...DEFAULT_LEADERBOARD];
   }
 }
 
+function saveScoreToLocalStorage(name, score, mode = 'classic') {
+  const cleanName = String(name || 'AAA')
+    .toUpperCase()
+    .replace(/[^A-Z0-9 _\-\.]/g, '')
+    .slice(0, 10) || 'AAA';
+  const cleanScore = Math.max(0, Math.round(Number(score) || 0));
+  const nowStr = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+  const list = getStoredLeaderboard();
+  const entry = {
+    id: Date.now(),
+    name: cleanName,
+    score: cleanScore,
+    mode,
+    date: nowStr,
+  };
+  list.push(entry);
+  list.sort((a, b) => b.score - a.score || b.id - a.id);
+  const trimmed = list.slice(0, 30);
+
+  try {
+    localStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(trimmed));
+  } catch (_) {}
+
+  renderPauseLeaderboard();
+  renderAdminDashboard();
+  return trimmed;
+}
+
+function deleteScoreFromLocalStorage(id) {
+  const list = getStoredLeaderboard().filter((item) => String(item.id) !== String(id));
+  try {
+    localStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(list));
+  } catch (_) {}
+  renderPauseLeaderboard();
+  renderAdminDashboard();
+}
+
+function getStoredClickStats() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CLICK_STATS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEYS.CLICK_STATS, JSON.stringify(DEFAULT_CLICKS));
+      return { ...DEFAULT_CLICKS };
+    }
+    return { ...DEFAULT_CLICKS, ...JSON.parse(raw) };
+  } catch (_) {
+    return { ...DEFAULT_CLICKS };
+  }
+}
+
+function trackAreaClick(areaClicked) {
+  const stats = getStoredClickStats();
+  stats[areaClicked] = (Number(stats[areaClicked]) || 0) + 1;
+  try {
+    localStorage.setItem(STORAGE_KEYS.CLICK_STATS, JSON.stringify(stats));
+  } catch (_) {}
+  renderAdminDashboard();
+}
+
+function resetAllLocalStats() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(DEFAULT_LEADERBOARD));
+    localStorage.setItem(STORAGE_KEYS.CLICK_STATS, JSON.stringify(DEFAULT_CLICKS));
+  } catch (_) {}
+  renderPauseLeaderboard();
+  renderAdminDashboard();
+}
+
 // =========================================================
-// 2. GAME BOY 3-SKIN SWITCHER (CLASSICA / UOMO / DONNA)
+// 2. EVENT MODE <-> GAME MODE TRANSITION & 8-BIT BUTTON MORPH
+// =========================================================
+function setAppMode(targetMode) {
+  const nextMode = targetMode === 'game' ? 'game' : 'event';
+  const changed = appMode !== nextMode;
+  appMode = nextMode;
+
+  document.body.setAttribute('data-app-mode', appMode);
+  const shell = document.getElementById('gbc-shell');
+  if (shell) shell.setAttribute('data-app-mode', appMode);
+
+  // Trigger 8-bit CSS flip animation on the 3 physical colored buttons
+  const plate = document.getElementById('action-buttons-plate');
+  if (plate && changed) {
+    plate.classList.remove('mode-switching');
+    void plate.offsetWidth; // reflow
+    plate.classList.add('mode-switching');
+    sound.modeSwitchJingle();
+  }
+
+  // Update physical button captions:
+  // Event Mode: Brunch / Aperitivo / Torneo + Horizontal button "🕹️ GIOCA"
+  // Game Mode:  Tasto A / Tasto B / Dash   + Horizontal button "✖ ESCI"
+  const lblGreen = document.getElementById('lbl-btn-green');
+  const lblRed = document.getElementById('lbl-btn-red');
+  const lblYellow = document.getElementById('lbl-btn-yellow');
+  const giocaLabel = document.getElementById('gioca-btn-label');
+
+  if (appMode === 'game') {
+    if (lblGreen) lblGreen.textContent = 'Tasto A';
+    if (lblRed) lblRed.textContent = 'Tasto B';
+    if (lblYellow) lblYellow.textContent = 'Dash';
+    if (giocaLabel) giocaLabel.textContent = '✖ ESCI';
+  } else {
+    if (lblGreen) lblGreen.textContent = 'Brunch';
+    if (lblRed) lblRed.textContent = 'Aperitivo';
+    if (lblYellow) lblYellow.textContent = 'Torneo';
+    if (giocaLabel) giocaLabel.textContent = '🕹️ GIOCA';
+  }
+}
+
+function enterGameMode() {
+  trackAreaClick('play_game');
+  setAppMode('game');
+  sound.startBGM();
+  showView('view-game');
+}
+
+function exitGameModeToEvent() {
+  if (gameEngine) {
+    gameEngine.togglePause(true);
+  }
+  const pauseModal = document.getElementById('game-pause-modal');
+  if (pauseModal) pauseModal.style.display = 'none';
+  setAppMode('event');
+  showView('view-intro');
+}
+
+// =========================================================
+// 3. GAME BOY 3-SKIN SWITCHER (CLASSICA / UOMO / DONNA)
 // =========================================================
 function applySkin(skinName) {
   const validSkins = ['classic', 'uomo', 'donna'];
@@ -41,14 +194,14 @@ function applySkin(skinName) {
   });
 
   try {
-    localStorage.setItem('rebrunch_gbc_skin', chosen);
+    localStorage.setItem(STORAGE_KEYS.SKIN, chosen);
   } catch (_) {}
 }
 
 function initSkinSwitcher() {
   let saved = 'classic';
   try {
-    saved = localStorage.getItem('rebrunch_gbc_skin') || 'classic';
+    saved = localStorage.getItem(STORAGE_KEYS.SKIN) || 'classic';
   } catch (_) {}
   applySkin(saved);
 
@@ -62,7 +215,7 @@ function initSkinSwitcher() {
 }
 
 // =========================================================
-// 3. LCD VIEW NAVIGATION
+// 4. LCD VIEW NAVIGATION
 // =========================================================
 function showView(viewId) {
   currentView = viewId;
@@ -77,150 +230,506 @@ function showView(viewId) {
     sound.startBGM();
   } else if (viewId === 'view-game') {
     ensureGameStarted();
-    loadHallOfFame();
+    gameEngine?.togglePause(false);
+    renderPauseLeaderboard();
+  } else if (viewId === 'view-admin') {
+    renderAdminDashboard();
   }
 }
 
 function openBrunchView() {
   sound.btnClick();
   trackAreaClick('green_brunch');
+  setAppMode('event');
   showView('view-brunch');
 }
 
 function openAperitivoView() {
   sound.btnClick();
   trackAreaClick('red_aperitivo');
+  setAppMode('event');
   showView('view-aperitivo');
 }
 
 function openTorneoView() {
   sound.btnClick();
   trackAreaClick('yellow_torneo');
+  setAppMode('event');
   showView('view-torneo');
 }
 
-function startPadelAdvergame() {
-  sound.btnClick();
-  sound.startBGM();
-  trackAreaClick('play_game');
-  showView('view-game');
-}
-
 // =========================================================
-// 4. ANIMATED PIXEL-ART DJ SCENE (APERITIVO VIEW)
+// 5. CHILL SUNNY AFTERNOON PIXEL-ART SCENE (APERITIVO VIEW)
 // =========================================================
-function initDjSceneCanvas() {
+function initChillAperitivoScene() {
   const canvas = document.getElementById('dj-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   let tick = 0;
 
-  function drawDj() {
+  // Slow drifting clouds
+  const clouds = [
+    { x: 18, y: 18, w: 38, spd: 0.14 },
+    { x: 122, y: 12, w: 46, spd: 0.1 },
+    { x: 215, y: 24, w: 34, spd: 0.16 },
+  ];
+
+  // Flocks of birds
+  const birds = [
+    { x: 40, y: 34, spd: 0.35, phase: 0 },
+    { x: 52, y: 30, spd: 0.35, phase: 2 },
+    { x: 62, y: 36, spd: 0.35, phase: 4 },
+    { x: 180, y: 26, spd: 0.28, phase: 1 },
+    { x: 192, y: 22, spd: 0.28, phase: 3 },
+  ];
+
+  function drawChillScene() {
     tick++;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const W = canvas.width;  // 288
+    const H = canvas.height; // 196
+    ctx.clearRect(0, 0, W, H);
 
-    // Club Background
-    ctx.fillStyle = '#090a10';
-    ctx.fillRect(0, 0, 280, 136);
+    // 1. Sunny Afternoon Sky Gradient (Azure -> Warm Horizon)
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(0, 0, W, 56);
+    ctx.fillStyle = '#7dd3fc';
+    ctx.fillRect(0, 56, W, 36);
+    ctx.fillStyle = '#bae6fd';
+    ctx.fillRect(0, 92, W, 24);
 
-    // Laser beams
-    ctx.strokeStyle = tick % 20 < 10 ? 'rgba(244, 63, 94, 0.45)' : 'rgba(56, 189, 248, 0.45)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(140, 6);
-    ctx.lineTo(20 + (tick * 3) % 240, 134);
-    ctx.moveTo(140, 6);
-    ctx.lineTo(260 - (tick * 3) % 240, 134);
-    ctx.stroke();
+    // 2. Warm Golden Sun (Top Right)
+    const sunPulse = Math.floor(tick / 25) % 2;
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(236 - sunPulse, 12 - sunPulse, 28 + sunPulse * 2, 28 + sunPulse * 2);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(240, 16, 20, 20);
 
-    // 8-Bit Spectrum Equalizer Bars in Background
-    const barColors = ['#9ad932', '#f7c11e', '#ef4444', '#58b8e8', '#a855f7'];
-    for (let i = 0; i < 16; i++) {
-      const wave = Math.abs(Math.sin(tick * 0.11 + i * 0.7));
-      const h = Math.round(10 + wave * 42);
-      const bx = 14 + i * 16;
-      const by = 74 - h;
-      ctx.fillStyle = barColors[i % barColors.length];
-      ctx.fillRect(bx, by, 11, h);
-    }
-
-    // Animated Pixel-Art DJ Behind Decks
-    const bob = tick % 16 < 8 ? 0 : 2;
-    const djX = 116;
-    const djY = 34 + bob;
-
-    // Headphones Band
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(djX + 6, djY - 4, 36, 5);
-    ctx.fillRect(djX + 2, djY + 1, 7, 14);
-    ctx.fillRect(djX + 39, djY + 1, 7, 14);
-
-    // DJ Head & Sunglasses
-    ctx.fillStyle = '#fde68a';
-    ctx.fillRect(djX + 9, djY + 1, 30, 22);
-    ctx.fillStyle = '#090d16';
-    ctx.fillRect(djX + 11, djY + 7, 11, 6);
-    ctx.fillRect(djX + 26, djY + 7, 11, 6);
-    ctx.fillRect(djX + 22, djY + 9, 4, 2);
-    ctx.fillStyle = '#58b8e8';
-    ctx.fillRect(djX + 13, djY + 8, 4, 2);
-    ctx.fillRect(djX + 28, djY + 8, 4, 2);
-
-    // Torso / Acid Jacket
-    ctx.fillStyle = '#f7c11e';
-    ctx.fillRect(djX + 4, djY + 23, 40, 28);
-    ctx.fillStyle = '#090d16';
-    ctx.fillRect(djX + 16, djY + 23, 16, 28);
-
-    // Animated Hand Scratching Vinyl
-    const handShift = tick % 12 < 6 ? -3 : 3;
-    ctx.fillStyle = '#fde68a';
-    ctx.fillRect(djX - 6 + handShift, djY + 38, 10, 7);
-    ctx.fillRect(djX + 44 - handShift, djY + 38, 10, 7);
-
-    // DJ Booth & Twin Technics Turntables
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(28, 84, 224, 46);
-    ctx.strokeStyle = '#58b8e8';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(28, 84, 224, 46);
-
-    [76, 204].forEach((cx, idx) => {
-      ctx.fillStyle = '#090d16';
-      ctx.fillRect(cx - 24, 76, 48, 9);
-      ctx.fillStyle = (tick + idx * 5) % 10 < 5 ? '#ef4444' : '#f7c11e';
-      ctx.fillRect(cx - 8, 78, 16, 4);
+    // 3. Slowly Drifting Fluffy Pixel Clouds
+    ctx.fillStyle = '#ffffff';
+    clouds.forEach((c) => {
+      c.x += c.spd;
+      if (c.x > W + 10) c.x = -c.w - 10;
+      const cx = Math.round(c.x);
+      ctx.fillRect(cx, c.y + 4, c.w, 8);
+      ctx.fillRect(cx + 6, c.y, c.w - 12, 6);
+      ctx.fillStyle = '#e0f2fe';
+      ctx.fillRect(cx + 2, c.y + 10, c.w - 4, 2);
+      ctx.fillStyle = '#ffffff';
     });
 
-    // Mixer Sliders
-    ctx.fillStyle = '#9ad932';
-    ctx.fillRect(128, 78, 24, 7);
+    // 4. Flocks of V-Shaped Pixel Birds
+    ctx.fillStyle = '#1e293b';
+    birds.forEach((b) => {
+      b.x += b.spd;
+      if (b.x > W + 12) b.x = -15;
+      const bx = Math.round(b.x);
+      const by = Math.round(b.y + Math.sin((tick + b.phase * 8) * 0.08) * 2);
+      const wingUp = Math.floor((tick + b.phase * 4) / 10) % 2 === 0;
+      if (wingUp) {
+        ctx.fillRect(bx - 3, by - 2, 2, 2);
+        ctx.fillRect(bx + 2, by - 2, 2, 2);
+        ctx.fillRect(bx - 1, by, 3, 1);
+      } else {
+        ctx.fillRect(bx - 3, by + 1, 2, 1);
+        ctx.fillRect(bx + 2, by + 1, 2, 1);
+        ctx.fillRect(bx - 1, by - 1, 3, 2);
+      }
+    });
 
-    // Booth Front Neon Sign
-    ctx.fillStyle = '#090d16';
-    ctx.fillRect(52, 95, 176, 24);
-    ctx.strokeStyle = '#f7c11e';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(52, 95, 176, 24);
+    // 5. Lush Green Club Lawn & Hedges
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, 114, W, 82);
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(0, 142, W, 54);
 
-    ctx.fillStyle = tick % 24 < 12 ? '#9ad932' : '#f7c11e';
-    ctx.font = '8px "Press Start 2P", monospace';
-    ctx.fillText('REPUBLIC ACID DJ', 74, 111);
+    // 6. Relaxed DJ in Outdoor Console (Center Midground)
+    const bob = Math.floor(tick / 18) % 2 === 0 ? 0 : 1;
+    const djX = 124;
+    const djY = 66 + bob;
 
-    // Floating 8-Bit Musical Notes
+    // Striped Sun Umbrella over DJ Booth
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(142, 40, 3, 58);
     ctx.fillStyle = '#f7c11e';
-    ctx.fillText('♪', 48, 36 - (tick % 14));
-    ctx.fillStyle = '#58b8e8';
-    ctx.fillText('♫', 218, 40 - ((tick + 7) % 14));
+    ctx.fillRect(102, 34, 84, 9);
+    ctx.fillStyle = '#ffffff';
+    for (let ux = 106; ux < 182; ux += 16) {
+      ctx.fillRect(ux, 34, 8, 9);
+    }
 
-    requestAnimationFrame(drawDj);
+    // Relaxed DJ Character (Summer Polo + Sunglasses + Headphones)
+    ctx.fillStyle = '#78350f'; // hair
+    ctx.fillRect(djX + 10, djY - 2, 20, 5);
+    ctx.fillStyle = '#fed7aa'; // head
+    ctx.fillRect(djX + 10, djY + 3, 20, 15);
+    ctx.fillStyle = '#0f172a'; // chill sunglasses
+    ctx.fillRect(djX + 12, djY + 7, 7, 4);
+    ctx.fillRect(djX + 21, djY + 7, 7, 4);
+    ctx.fillRect(djX + 19, djY + 8, 2, 1);
+    // Relaxed smile
+    ctx.fillRect(djX + 16, djY + 14, 8, 1);
+
+    // Summer Linen / Mint Shirt
+    ctx.fillStyle = '#a7f3d0';
+    ctx.fillRect(djX + 6, djY + 18, 28, 20);
+    ctx.fillStyle = '#f7c11e';
+    ctx.fillRect(djX + 16, djY + 18, 8, 18);
+
+    // Wooden Outdoor DJ Console
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(88, 96, 112, 36);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(88, 96, 112, 36);
+
+    // Turntables & Laptop
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(98, 90, 28, 6);
+    ctx.fillRect(162, 90, 28, 6);
+    ctx.fillStyle = '#f7c11e';
+    ctx.fillRect(136, 88, 16, 8);
+
+    // Console Front Banner: "MORNING SET"
+    ctx.fillStyle = '#fef9c3';
+    ctx.fillRect(100, 104, 88, 18);
+    ctx.strokeStyle = '#451a03';
+    ctx.strokeRect(100, 104, 88, 18);
+    ctx.fillStyle = '#b45309';
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText('MORNING SET', 111, 116);
+
+    // Floating Chill Musical Notes
+    ctx.fillStyle = '#0f172a';
+    const noteLift = Math.floor(tick / 14) % 6;
+    ctx.fillText('♪', 82, 82 - noteLift);
+    ctx.fillText('♫', 198, 78 - ((noteLift + 3) % 6));
+
+    // =========================================================
+    // 7. FOREGROUND SILHOUETTES BELOW CONSOLE (y: 138..192)
+    // =========================================================
+
+    // A) LEFT FOREGROUND: People Playing Padel on Mini Sunlit Court
+    ctx.fillStyle = '#0284c7';
+    ctx.fillRect(10, 148, 78, 38);
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, 148, 78, 38);
+    // Mini Net
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(48, 148, 2, 38);
+
+    // Two Padel Players Silhouettes Rallying
+    const pBounce = Math.floor(tick / 10) % 2;
+    ctx.fillStyle = '#0f172a';
+    // Left player
+    ctx.fillRect(18, 156 - pBounce, 5, 5);
+    ctx.fillRect(17, 161 - pBounce, 7, 10);
+    ctx.fillRect(24, 160 - pBounce, 4, 3); // racket
+    // Right player
+    ctx.fillRect(74, 158 + pBounce, 5, 5);
+    ctx.fillRect(73, 163 + pBounce, 7, 10);
+    ctx.fillRect(69, 162 + pBounce, 4, 3); // racket
+
+    // Bouncing Padel Ball between them
+    const rallyT = (Math.sin(tick * 0.06) + 1) / 2;
+    const ballX = Math.round(24 + rallyT * 46);
+    const ballY = Math.round(162 - Math.sin(rallyT * Math.PI) * 12);
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(ballX, ballY, 3, 3);
+
+    // B) CENTER FOREGROUND: Friends Eating Brunch at Table
+    const tblX = 114;
+    const tblY = 166;
+    // Table
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(tblX + 12, tblY + 4, 36, 4);
+    ctx.fillRect(tblX + 28, tblY + 8, 4, 14);
+    // Seated Left Person eating Brunch
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(tblX + 2, tblY - 6, 6, 6);
+    ctx.fillRect(tblX + 1, tblY, 8, 14);
+    // Seated Right Person eating Brunch
+    ctx.fillRect(tblX + 52, tblY - 6, 6, 6);
+    ctx.fillRect(tblX + 51, tblY, 8, 14);
+    // Brunch Plates & Pancakes on Table
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(tblX + 16, tblY, 8, 4);
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(tblX + 34, tblY - 1, 8, 5);
+
+    // C) RIGHT FOREGROUND: People Chatting & Drinking Spritz in Peace
+    const drX = 212;
+    const drY = 156;
+    const toastLift = Math.floor(tick / 20) % 2 === 0 ? 0 : -2;
+    // Person 1 (left)
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(drX, drY, 6, 6);
+    ctx.fillRect(drX - 1, drY + 6, 8, 18);
+    // Person 2 (right)
+    ctx.fillRect(drX + 36, drY + 1, 6, 6);
+    ctx.fillRect(drX + 35, drY + 7, 8, 17);
+    // Arms holding orange Spritz glasses
+    ctx.fillRect(drX + 7, drY + 9 + toastLift, 8, 2);
+    ctx.fillRect(drX + 27, drY + 9 + toastLift, 8, 2);
+    // Glowing Orange Spritz Glasses
+    ctx.fillStyle = '#fb923c';
+    ctx.fillRect(drX + 14, drY + 5 + toastLift, 4, 5);
+    ctx.fillRect(drX + 24, drY + 5 + toastLift, 4, 5);
+
+    requestAnimationFrame(drawChillScene);
   }
 
-  drawDj();
+  drawChillScene();
 }
 
 // =========================================================
-// 5. HARDWARE VOLUME KEYS (VolumeUp / VolumeDown) + OSD
+// 6. IN-GAME PAUSE MENU & END-OF-MATCH ARCADE SCORE FORM
+// =========================================================
+function ensureGameStarted() {
+  const canvas = document.getElementById('game-canvas');
+  if (!canvas) return;
+
+  if (!gameEngine) {
+    gameEngine = new PadelGameEngine(canvas, input, {
+      onMatchEnd: handleMatchEnd,
+    });
+    gameEngine.startNewMatch();
+  }
+}
+
+function togglePauseMenu(forceOpen = null) {
+  if (!gameEngine || currentView !== 'view-game') return;
+  const modal = document.getElementById('game-pause-modal');
+  if (!modal) return;
+
+  const isPaused = gameEngine.togglePause(forceOpen);
+  modal.style.display = isPaused ? 'flex' : 'none';
+  if (isPaused) {
+    renderPauseLeaderboard();
+  }
+}
+
+function renderPauseLeaderboard() {
+  const container = document.getElementById('pause-leaderboard-list');
+  if (!container) return;
+
+  const rows = getStoredLeaderboard().slice(0, 5);
+  container.innerHTML = rows
+    .map(
+      (r, idx) => `
+      <div class="pause-lb-row">
+        <span>#${idx + 1} <strong>${escapeHtml(r.name)}</strong></span>
+        <span style="color:#f7c11e;">${Number(r.score)} PTS</span>
+      </div>
+    `
+    )
+    .join('');
+}
+
+function handleMatchEnd(summary) {
+  lastMatchScore = summary.score || 0;
+  const modal = document.getElementById('match-over-modal');
+  const title = document.getElementById('match-over-title');
+  const scoreLine = document.getElementById('match-over-score');
+  const feedback = document.getElementById('arcade-save-feedback');
+  const saveBtn = document.getElementById('btn-save-score');
+
+  if (title) {
+    title.textContent = summary.won ? '🏆 VITTORIA EPICA!' : 'FINE PARTITA!';
+  }
+  if (scoreLine) {
+    scoreLine.textContent = `PUNTEGGIO: ${lastMatchScore} PTS`;
+  }
+  if (feedback) {
+    feedback.textContent = '';
+  }
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'SALVA';
+  }
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function bindArcadeScoreForm() {
+  const form = document.getElementById('arcade-score-form');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const inputEl = document.getElementById('arcade-name-input');
+    const feedback = document.getElementById('arcade-save-feedback');
+    const saveBtn = document.getElementById('btn-save-score');
+
+    const rawName = (inputEl ? inputEl.value : 'AAA').trim().toUpperCase() || 'AAA';
+    saveScoreToLocalStorage(rawName, lastMatchScore, gameEngine?.gameMode || 'classic');
+
+    sound.pointJingle(true);
+    if (feedback) feedback.textContent = `✔ SALVATO IN CACHE: ${rawName} (${lastMatchScore} PTS)`;
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'OK!';
+    }
+  });
+}
+
+// =========================================================
+// 7. SECRET ADMIN SHORTCUT & PASSWORD ("GiulioBasciano")
+// =========================================================
+function openSecretAdminPrompt() {
+  sound.btnClick();
+  const modal = document.getElementById('admin-login-modal');
+  const errEl = document.getElementById('admin-login-error');
+  const inputEl = document.getElementById('admin-password-input');
+  if (errEl) errEl.textContent = '';
+  if (inputEl) inputEl.value = '';
+  if (modal) {
+    modal.style.display = 'flex';
+    setTimeout(() => inputEl?.focus(), 60);
+  }
+}
+
+function bindSecretAdminAccess() {
+  // 1. Long-press (750ms) or Triple-Click on Republic logo or Center LEDs
+  const triggers = [
+    document.getElementById('republic-secret-trigger'),
+    document.getElementById('leds-secret-trigger'),
+  ];
+
+  triggers.forEach((el) => {
+    if (!el) return;
+    let pressTimer = null;
+    let clickCount = 0;
+    let clickTimer = null;
+
+    el.addEventListener('pointerdown', () => {
+      pressTimer = setTimeout(() => {
+        openSecretAdminPrompt();
+      }, 750);
+    });
+
+    const cancelPress = () => {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+    el.addEventListener('pointerup', cancelPress);
+    el.addEventListener('pointerleave', cancelPress);
+
+    el.addEventListener('click', () => {
+      clickCount++;
+      if (clickTimer) clearTimeout(clickTimer);
+      if (clickCount >= 3) {
+        clickCount = 0;
+        openSecretAdminPrompt();
+      } else {
+        clickTimer = setTimeout(() => {
+          clickCount = 0;
+        }, 600);
+      }
+    });
+  });
+
+  // 2. D-Pad sequence (UP, UP, DOWN, DOWN)
+  input.onSecretSequence = () => {
+    openSecretAdminPrompt();
+  };
+
+  // 3. Keyboard shortcut Ctrl+Shift+A
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyA') {
+      e.preventDefault();
+      openSecretAdminPrompt();
+    }
+  });
+
+  // Password Form Submission ("GiulioBasciano")
+  const form = document.getElementById('admin-login-form');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const inputEl = document.getElementById('admin-password-input');
+    const errEl = document.getElementById('admin-login-error');
+    const val = (inputEl ? inputEl.value : '').trim();
+
+    if (val === 'GiulioBasciano') {
+      sound.pointJingle(true);
+      const modal = document.getElementById('admin-login-modal');
+      if (modal) modal.style.display = 'none';
+      setAppMode('event');
+      showView('view-admin');
+    } else {
+      sound.pointJingle(false);
+      if (errEl) errEl.textContent = 'PASSWORD ERRATA!';
+    }
+  });
+
+  document.getElementById('btn-close-admin-login')?.addEventListener('click', () => {
+    sound.btnClick();
+    const modal = document.getElementById('admin-login-modal');
+    if (modal) modal.style.display = 'none';
+  });
+
+  document.getElementById('btn-admin-reset-stats')?.addEventListener('click', () => {
+    sound.btnClick();
+    resetAllLocalStats();
+  });
+}
+
+function renderAdminDashboard() {
+  const heatGrid = document.getElementById('admin-heatmap-grid');
+  const scoresList = document.getElementById('admin-scores-list');
+  if (!heatGrid || !scoresList) return;
+
+  const stats = getStoredClickStats();
+  const labels = [
+    { key: 'green_brunch',  label: '🟢 BRUNCH',     color: '#9ad932' },
+    { key: 'red_aperitivo', label: '🔴 APERITIVO',  color: '#f87171' },
+    { key: 'yellow_torneo', label: '🟡 TORNEO',     color: '#f7c11e' },
+    { key: 'play_game',     label: '🕹️ GIOCA',      color: '#38bdf8' },
+    { key: 'wa_daniele',    label: '💬 WA DANIELE', color: '#4ade80' },
+    { key: 'wa_mirko',      label: '💬 WA MIRKO',   color: '#fde047' },
+    { key: 'wa_mario',      label: '💬 WA MARIO',   color: '#fb923c' },
+  ];
+
+  heatGrid.innerHTML = labels
+    .map(
+      (item) => `
+      <div class="admin-heat-card">
+        <span style="color:${item.color};">${item.label}</span>
+        <strong>${Number(stats[item.key] || 0)}</strong>
+      </div>
+    `
+    )
+    .join('');
+
+  const leaderboard = getStoredLeaderboard();
+  if (leaderboard.length === 0) {
+    scoresList.innerHTML = '<div class="hof-empty">Nessun punteggio in localStorage.</div>';
+  } else {
+    scoresList.innerHTML = leaderboard
+      .map(
+        (row, idx) => `
+        <div class="admin-score-row">
+          <span>#${idx + 1} <strong>${escapeHtml(row.name)}</strong> (${Number(row.score)} PT)</span>
+          <button type="button" class="admin-del-btn" data-del-score="${escapeHtml(row.id)}">✖</button>
+        </div>
+      `
+      )
+      .join('');
+
+    scoresList.querySelectorAll('[data-del-score]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        sound.btnClick();
+        deleteScoreFromLocalStorage(btn.getAttribute('data-del-score'));
+      });
+    });
+  }
+}
+
+// =========================================================
+// 8. HARDWARE VOLUME KEYS + UI BINDINGS
 // =========================================================
 function showVolumeOsd(vol, isEasterEgg = false) {
   const osd = document.getElementById('volume-osd');
@@ -230,7 +739,7 @@ function showVolumeOsd(vol, isEasterEgg = false) {
 
   const filled = Math.round(vol * 10);
   const bars = '█'.repeat(filled) + '░'.repeat(10 - filled);
-  titleEl.textContent = isEasterEgg ? '🔥 TURBO BASS MAX! 🔥' : `VOL CHIPTUNE ${Math.round(vol * 100)}%`;
+  titleEl.textContent = isEasterEgg ? '🔥 SUNNY BASS MAX! 🔥' : `VOL CHIPTUNE ${Math.round(vol * 100)}%`;
   barsEl.textContent = bars;
 
   osd.classList.add('show');
@@ -263,130 +772,12 @@ function bindHardwareVolumeKeys() {
     } else if (isVolDown) {
       const v = sound.adjustVolume(-0.1);
       showVolumeOsd(v, false);
-    }
-  });
-}
-
-// =========================================================
-// 6. SUPER PADEL DX 2V2 & ARCADE SCORE SUBMISSION
-// =========================================================
-function ensureGameStarted() {
-  const canvas = document.getElementById('game-canvas');
-  if (!canvas) return;
-
-  if (!gameEngine) {
-    gameEngine = new PadelGameEngine(canvas, input, {
-      onMatchEnd: handleMatchEnd,
-    });
-    gameEngine.startNewMatch();
-  }
-}
-
-function handleMatchEnd(summary) {
-  lastMatchScore = summary.score || 0;
-  const modal = document.getElementById('match-over-modal');
-  const title = document.getElementById('match-over-title');
-  const scoreLine = document.getElementById('match-over-score');
-  const feedback = document.getElementById('arcade-save-feedback');
-  const saveBtn = document.getElementById('btn-save-score');
-
-  if (title) {
-    title.textContent = summary.won ? '🏆 VITTORIA EPICA!' : 'FINE PARTITA!';
-  }
-  if (scoreLine) {
-    scoreLine.textContent = `PUNTEGGIO: ${lastMatchScore} PTS (SET ${summary.gamesPlayer}-${summary.gamesCpu})`;
-  }
-  if (feedback) {
-    feedback.textContent = '';
-  }
-  if (saveBtn) {
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'SALVA';
-  }
-  if (modal) {
-    modal.style.display = 'flex';
-  }
-}
-
-function bindArcadeScoreForm() {
-  const form = document.getElementById('arcade-score-form');
-  if (!form) return;
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const inputEl = document.getElementById('arcade-name-input');
-    const feedback = document.getElementById('arcade-save-feedback');
-    const saveBtn = document.getElementById('btn-save-score');
-
-    const rawName = (inputEl ? inputEl.value : 'AAA').trim().toUpperCase() || 'AAA';
-    if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.textContent = '...';
-    }
-
-    try {
-      const res = await fetch('api/save_match.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: rawName,
-          score: lastMatchScore,
-        }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        sound.pointJingle(true);
-        if (feedback) feedback.textContent = `✔ SALVATO: ${rawName} (${lastMatchScore} PTS)`;
-        if (saveBtn) saveBtn.textContent = 'OK!';
-        await loadHallOfFame();
-      } else {
-        if (feedback) feedback.textContent = 'ERRORE SALVATAGGIO';
-        if (saveBtn) {
-          saveBtn.disabled = false;
-          saveBtn.textContent = 'SALVA';
-        }
-      }
-    } catch (_) {
-      if (feedback) feedback.textContent = 'ERRORE DI RETE';
-      if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'SALVA';
+    } else if (e.code === 'Escape' || e.code === 'KeyP') {
+      if (appMode === 'game' && currentView === 'view-game') {
+        togglePauseMenu();
       }
     }
   });
-}
-
-// =========================================================
-// 7. HALL OF FAME (LEADERBOARD) FETCHER
-// =========================================================
-async function loadHallOfFame() {
-  const matchesContainer = document.getElementById('hof-matches-list');
-  if (!matchesContainer) return;
-
-  try {
-    const res = await fetch('api/stats.php?action=public');
-    const data = await res.json();
-    if (!data.ok) return;
-
-    const rows = data.leaderboard || [];
-    if (rows.length === 0) {
-      matchesContainer.innerHTML = '<div class="hof-empty">Nessun punteggio registrato. Gioca ora!</div>';
-    } else {
-      matchesContainer.innerHTML = rows
-        .slice(0, 10)
-        .map((m, idx) => {
-          return `
-            <div class="hof-item">
-              <span>#${idx + 1} <strong>${escapeHtml(m.name)}</strong></span>
-              <span style="color:#f7c11e;">${Number(m.score)} PTS</span>
-            </div>
-          `;
-        })
-        .join('');
-    }
-  } catch (_) {
-    // Non-blocking
-  }
 }
 
 function escapeHtml(str) {
@@ -397,24 +788,41 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// =========================================================
-// 8. SHELL & UI BUTTON BINDINGS
-// =========================================================
 function bindUiControls() {
-  // Clickable Side Labels & Back Buttons
+  // Back buttons inside LCD views
   document.querySelectorAll('[data-open-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetView = btn.getAttribute('data-open-view');
-      const trackArea = btn.getAttribute('data-track-area');
       sound.btnClick();
-      if (trackArea) trackAreaClick(trackArea);
+      if (targetView === 'view-intro') {
+        setAppMode('event');
+      }
       if (targetView) showView(targetView);
     });
   });
 
-  // Clicking the hero illustration on Intro starts the Padel game
+  // Side Labels next to the 3 physical colored buttons
+  document.querySelectorAll('[data-btn-proxy]').forEach((lbl) => {
+    lbl.addEventListener('click', () => {
+      const code = lbl.getAttribute('data-btn-proxy');
+      handleShellButton(code);
+    });
+  });
+
+  // Hero illustration click starts Game Mode
   document.querySelector('.poster-hero-art')?.addEventListener('click', () => {
-    startPadelAdvergame();
+    enterGameMode();
+  });
+
+  // Track WhatsApp clicks in LocalStorage
+  document.getElementById('btn-wa-daniele')?.addEventListener('click', () => {
+    trackAreaClick('wa_daniele');
+  });
+  document.getElementById('wa-link-mirko')?.addEventListener('click', () => {
+    trackAreaClick('wa_mirko');
+  });
+  document.getElementById('wa-link-mario')?.addEventListener('click', () => {
+    trackAreaClick('wa_mario');
   });
 
   // WhatsApp 8-Bit Button Submenu Toggle in Torneo View
@@ -427,31 +835,61 @@ function bindUiControls() {
 
   // Physical Shell Buttons Routing
   input.onButtonPress = (btn) => {
-    if (btn === 'GIOCA') {
-      if (currentView !== 'view-game') {
-        startPadelAdvergame();
-      } else {
-        trackAreaClick('play_game');
-      }
-      return;
-    }
-
-    // When NOT in an active Padel rally (or when outside view-game),
-    // the 3 colored buttons open their dedicated LCD screens:
-    // GREEN -> Brunch, RED -> Aperitivo, YELLOW -> Torneo
-    const inActiveGame = currentView === 'view-game' && gameEngine && !gameEngine.matchOver;
-    if (!inActiveGame) {
-      if (btn === 'GREEN') openBrunchView();
-      else if (btn === 'RED') openAperitivoView();
-      else if (btn === 'YELLOW') openTorneoView();
-    }
+    handleShellButton(btn);
   };
 
-  // Audio SFX toggle
+  // In-Game Pause Button & Pause Menu Controls
+  document.getElementById('btn-game-pause')?.addEventListener('click', () => {
+    sound.btnClick();
+    togglePauseMenu();
+  });
+
+  document.getElementById('btn-resume-game')?.addEventListener('click', () => {
+    sound.btnClick();
+    togglePauseMenu(false);
+  });
+
+  document.getElementById('btn-restart-match')?.addEventListener('click', () => {
+    sound.btnClick();
+    togglePauseMenu(false);
+    gameEngine?.startNewMatch();
+  });
+
+  // Character Skin Selector inside Pause Menu
+  document.querySelectorAll('[data-char-skin]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const skinKey = btn.getAttribute('data-char-skin');
+      sound.btnClick();
+      document.querySelectorAll('[data-char-skin]').forEach((b) => b.classList.toggle('active', b === btn));
+      gameEngine?.setCharacterSkin(skinKey);
+    });
+  });
+
+  // Game Mode Selector inside Pause Menu
+  document.querySelectorAll('[data-game-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modeKey = btn.getAttribute('data-game-mode');
+      sound.btnClick();
+      document.querySelectorAll('[data-game-mode]').forEach((b) => b.classList.toggle('active', b === btn));
+      gameEngine?.setGameMode(modeKey);
+      togglePauseMenu(false);
+    });
+  });
+
+  // MUSIC: ON / OFF ("Sunny" Boney M. Chiptune Loop)
+  const btnMusic = document.getElementById('btn-music-toggle');
+  btnMusic?.addEventListener('click', () => {
+    const on = sound.toggleMusic();
+    btnMusic.textContent = on ? 'MUSIC:ON' : 'MUSIC:OFF';
+    btnMusic.classList.toggle('active', on);
+  });
+
+  // SFX: ON / OFF
   const btnAudio = document.getElementById('btn-audio-toggle');
   btnAudio?.addEventListener('click', () => {
     const on = sound.toggleMute();
-    btnAudio.textContent = on ? '♪ ON' : '♪ OFF';
+    btnAudio.textContent = on ? 'SFX:ON' : 'SFX:OFF';
+    btnAudio.classList.toggle('active', on);
     if (on) sound.btnClick();
   });
 
@@ -471,17 +909,30 @@ function bindUiControls() {
     gameEngine?.startNewMatch();
   });
 
-  document.getElementById('btn-scroll-rank')?.addEventListener('click', () => {
+  document.getElementById('btn-open-pause-rank')?.addEventListener('click', () => {
     sound.btnClick();
     const modal = document.getElementById('match-over-modal');
     if (modal) modal.style.display = 'none';
-    document.getElementById('hall-of-fame')?.scrollIntoView({ behavior: 'smooth' });
+    togglePauseMenu(true);
   });
+}
 
-  document.getElementById('btn-refresh-hof')?.addEventListener('click', () => {
-    sound.btnClick();
-    loadHallOfFame();
-  });
+function handleShellButton(btn) {
+  if (btn === 'GIOCA') {
+    if (appMode === 'event') {
+      enterGameMode();
+    } else {
+      exitGameModeToEvent();
+    }
+    return;
+  }
+
+  // In Event Mode, the 3 colored buttons open Brunch / Aperitivo / Torneo
+  if (appMode === 'event') {
+    if (btn === 'GREEN') openBrunchView();
+    else if (btn === 'RED') openAperitivoView();
+    else if (btn === 'YELLOW') openTorneoView();
+  }
 }
 
 // =========================================================
@@ -489,9 +940,11 @@ function bindUiControls() {
 // =========================================================
 window.addEventListener('DOMContentLoaded', () => {
   initSkinSwitcher();
-  initDjSceneCanvas();
+  initChillAperitivoScene();
   bindHardwareVolumeKeys();
   bindArcadeScoreForm();
+  bindSecretAdminAccess();
   bindUiControls();
-  loadHallOfFame();
+  renderPauseLeaderboard();
+  renderAdminDashboard();
 });

@@ -1,4 +1,4 @@
-// js/game/engine.js - Super Padel DX 2v2 with 2.5D Padel Cage Walls & Commodore 64 Animated Crowd
+// js/game/engine.js - Super Padel DX 2v2 with Expanded Court, Pause Menu Support, Game Modes & C64 Crowd
 
 import { COURT, BallPhysics, computeChargedShotVelocity } from './physics.js';
 import { PadelPlayer, PALETTES } from './entities.js';
@@ -7,7 +7,6 @@ import { sound } from './audio.js';
 
 const TENNIS_POINTS = ['0', '15', '30', '40', 'AD'];
 
-// Classic Commodore 64 16-Color Inspired Palette for Stadium Spectators
 const C64_SHIRTS = [
   '#58b8e8', '#f7c11e', '#9ad932', '#e53935',
   '#ec4899', '#a855f7', '#ffffff', '#fb923c',
@@ -30,7 +29,7 @@ export class PadelGameEngine {
       team: 'player',
       side: 'left',
       x: 112,
-      y: 214,
+      y: 288,
       isHuman: true,
       palette: PALETTES.human,
     });
@@ -41,7 +40,7 @@ export class PadelGameEngine {
       team: 'player',
       side: 'right',
       x: 208,
-      y: 214,
+      y: 288,
       isHuman: false,
       palette: PALETTES.partner,
     });
@@ -52,7 +51,7 @@ export class PadelGameEngine {
       team: 'cpu',
       side: 'left',
       x: 112,
-      y: 78,
+      y: 88,
       isHuman: false,
       palette: PALETTES.cpuLeft,
     });
@@ -63,7 +62,7 @@ export class PadelGameEngine {
       team: 'cpu',
       side: 'right',
       x: 208,
-      y: 78,
+      y: 88,
       isHuman: false,
       palette: PALETTES.cpuRight,
     });
@@ -78,7 +77,7 @@ export class PadelGameEngine {
         this.crowdFans.push({
           row,
           x: 22 + i * 18 + (row % 2) * 7,
-          baseY: row === 0 ? 8 : 19,
+          baseY: row === 0 ? 8 : 20,
           shirt: C64_SHIRTS[(i + row * 3) % C64_SHIRTS.length],
           hair: C64_HAIR[(i * 2 + row) % C64_HAIR.length],
           phase: (i * 3 + row * 5) % 16,
@@ -87,10 +86,14 @@ export class PadelGameEngine {
       }
     }
 
-    // Visual FX (Sparks & Confetti)
     this.particles = [];
     this.frameTick = 0;
     this.crowdCheerTimer = 0;
+
+    // Game Mode & Pause Settings
+    this.gameMode = 'classic'; // 'classic' (2 games), 'tiebreak' (7 pts), 'turbo' (pro speed)
+    this.characterSkin = 'classic';
+    this.paused = false;
 
     // Match State & Arcade Score
     this.ptsPlayer = 0;
@@ -101,10 +104,29 @@ export class PadelGameEngine {
     this.arcadeScore = 0;
     this.rallyHits = 0;
     this.waitingForServe = true;
-    this.bannerText = 'PREMI VERDE/ROSSO PER SERVIRE!';
+    this.bannerText = 'TASTO A (VERDE) PER SERVIRE!';
     this.bannerTimer = 90;
     this.matchOver = false;
     this.running = false;
+  }
+
+  setCharacterSkin(skinKey) {
+    this.characterSkin = skinKey;
+    this.human.setSkin(skinKey);
+  }
+
+  setGameMode(modeKey) {
+    this.gameMode = modeKey;
+    this.startNewMatch();
+  }
+
+  togglePause(forceState = null) {
+    this.paused = typeof forceState === 'boolean' ? forceState : !this.paused;
+    return this.paused;
+  }
+
+  getSpeedMultiplier() {
+    return this.gameMode === 'turbo' ? 1.18 : 1.0;
   }
 
   startNewMatch() {
@@ -115,8 +137,15 @@ export class PadelGameEngine {
     this.arcadeScore = 0;
     this.rallyHits = 0;
     this.matchOver = false;
+    this.paused = false;
     this.crowdCheerTimer = 45;
-    this.resetRally('TOCCA A TE SERVIRE!');
+    const modeBanner =
+      this.gameMode === 'tiebreak'
+        ? 'TIE-BREAK AI 7 PUNTI!'
+        : this.gameMode === 'turbo'
+          ? 'MODALITA MAESTRI TURBO!'
+          : 'TOCCA A TE SERVIRE!';
+    this.resetRally(modeBanner);
     this._syncHud('READY!');
     if (!this.running) {
       this.running = true;
@@ -150,7 +179,9 @@ export class PadelGameEngine {
 
   loop() {
     if (!this.running) return;
-    this.update();
+    if (!this.paused) {
+      this.update();
+    }
     this.render();
     requestAnimationFrame(() => this.loop());
   }
@@ -159,7 +190,6 @@ export class PadelGameEngine {
     this.frameTick++;
     if (this.crowdCheerTimer > 0) this.crowdCheerTimer--;
 
-    // Update particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.x += p.vx;
@@ -172,6 +202,7 @@ export class PadelGameEngine {
     if (this.bannerTimer > 0) this.bannerTimer--;
 
     const action = this.human.updateHuman(this.input, this.ball);
+    const speedMult = this.getSpeedMultiplier();
 
     // Serve trigger
     if (this.waitingForServe) {
@@ -179,10 +210,9 @@ export class PadelGameEngine {
       this.ball.y = this.human.y - 6;
       this.ball.z = 11;
 
-      if (action || this.input.keys.start) {
-        this.input.keys.start = false;
+      if (action) {
         this.waitingForServe = false;
-        const serveCharge = action && typeof action.charge === 'number' ? action.charge : 45;
+        const serveCharge = typeof action.charge === 'number' ? action.charge : 45;
         const aimX = (this.input.keys.left ? -0.9 : 0) + (this.input.keys.right ? 0.9 : 0);
         const shot = computeChargedShotVelocity({
           charge: serveCharge,
@@ -190,7 +220,8 @@ export class PadelGameEngine {
           aimX: aimX || 0.35,
           playerY: this.human.y,
           ballZ: this.ball.z,
-          isLob: action?.type === 'lob',
+          isLob: action.type === 'lob',
+          speedMultiplier: speedMult,
         });
         sound.paddleHit(1 + serveCharge / 100);
         this._spawnSparks(this.ball.x, this.ball.y - this.ball.z, '#9ad932', 6);
@@ -217,8 +248,8 @@ export class PadelGameEngine {
     }
 
     // Update Partner & Opponents AI
-    this.ai.updatePartner(this.partner, this.human, this.ball);
-    this.ai.updateOpponents(this.cpuLeft, this.cpuRight, this.ball);
+    this.ai.updatePartner(this.partner, this.human, this.ball, speedMult);
+    this.ai.updateOpponents(this.cpuLeft, this.cpuRight, this.ball, speedMult);
 
     // Update 2.5D Ball Physics
     const result = this.ball.update();
@@ -240,6 +271,7 @@ export class PadelGameEngine {
       playerY: this.human.y,
       ballZ: this.ball.z,
       isLob,
+      speedMultiplier: this.getSpeedMultiplier(),
     });
 
     if (shot.isSmash) {
@@ -261,7 +293,7 @@ export class PadelGameEngine {
 
   _handlePointOutcome(result) {
     this.ball.inPlay = false;
-    this.crowdCheerTimer = 110; // C64 crowd erupts on every point!
+    this.crowdCheerTimer = 110;
 
     let winner = result.winner;
     if (result.event === 'net_fault') {
@@ -287,42 +319,36 @@ export class PadelGameEngine {
       this._syncHud(`🔴 ${reasonLabel}`);
     }
 
-    // Check game win
-    if (this.ptsPlayer >= 4 && this.ptsPlayer - this.ptsCpu >= 2) {
-      this.gamesPlayer++;
-      this.arcadeScore += 350;
-      this.ptsPlayer = 0;
-      this.ptsCpu = 0;
-      reasonLabel = 'GAME VINTI DA TE!';
-    } else if (this.ptsCpu >= 4 && this.ptsCpu - this.ptsPlayer >= 2) {
-      this.gamesCpu++;
-      this.ptsPlayer = 0;
-      this.ptsCpu = 0;
-      reasonLabel = 'GAME AI MAESTRI!';
+    // Tie-break mode check (race to 7 pts)
+    if (this.gameMode === 'tiebreak') {
+      if ((this.ptsPlayer >= 7 || this.ptsCpu >= 7) && Math.abs(this.ptsPlayer - this.ptsCpu) >= 2) {
+        this.gamesPlayer = this.ptsPlayer > this.ptsCpu ? 1 : 0;
+        this.gamesCpu = this.ptsCpu > this.ptsPlayer ? 1 : 0;
+        this._finishMatch();
+        return;
+      }
+    } else {
+      // Standard game win
+      if (this.ptsPlayer >= 4 && this.ptsPlayer - this.ptsCpu >= 2) {
+        this.gamesPlayer++;
+        this.arcadeScore += 350;
+        this.ptsPlayer = 0;
+        this.ptsCpu = 0;
+        reasonLabel = 'GAME VINTI DA TE!';
+      } else if (this.ptsCpu >= 4 && this.ptsCpu - this.ptsPlayer >= 2) {
+        this.gamesCpu++;
+        this.ptsPlayer = 0;
+        this.ptsCpu = 0;
+        reasonLabel = 'GAME AI MAESTRI!';
+      }
+
+      if (this.gamesPlayer >= this.targetGames || this.gamesCpu >= this.targetGames) {
+        this._finishMatch();
+        return;
+      }
     }
 
     this._syncHud(reasonLabel);
-
-    // Check match end
-    if (this.gamesPlayer >= this.targetGames || this.gamesCpu >= this.targetGames) {
-      this.matchOver = true;
-      const playerWon = this.gamesPlayer > this.gamesCpu;
-      if (playerWon) {
-        this.arcadeScore += 500;
-      } else {
-        this.arcadeScore = Math.max(120, this.arcadeScore);
-      }
-
-      if (typeof this.callbacks.onMatchEnd === 'function') {
-        this.callbacks.onMatchEnd({
-          won: playerWon,
-          gamesPlayer: this.gamesPlayer,
-          gamesCpu: this.gamesCpu,
-          score: this.arcadeScore,
-        });
-      }
-      return;
-    }
 
     setTimeout(() => {
       if (!this.matchOver) {
@@ -331,7 +357,30 @@ export class PadelGameEngine {
     }, 1050);
   }
 
+  _finishMatch() {
+    this.matchOver = true;
+    const playerWon = this.gamesPlayer > this.gamesCpu;
+    if (playerWon) {
+      this.arcadeScore += 500;
+    } else {
+      this.arcadeScore = Math.max(120, this.arcadeScore);
+    }
+
+    if (typeof this.callbacks.onMatchEnd === 'function') {
+      this.callbacks.onMatchEnd({
+        won: playerWon,
+        gamesPlayer: this.gamesPlayer,
+        gamesCpu: this.gamesCpu,
+        score: this.arcadeScore,
+        mode: this.gameMode,
+      });
+    }
+  }
+
   _formatTennisScore(p1, p2) {
+    if (this.gameMode === 'tiebreak') {
+      return [String(p1), String(p2)];
+    }
     if (p1 >= 3 && p2 >= 3) {
       if (p1 === p2) return ['40', '40'];
       return p1 > p2 ? ['AD', '40'] : ['40', 'AD'];
@@ -351,28 +400,22 @@ export class PadelGameEngine {
     if (elS2) elS2.textContent = s2;
     if (elG1) elG1.textContent = `G:${this.gamesPlayer}`;
     if (elG2) elG2.textContent = `G:${this.gamesCpu}`;
-    if (elBadge && shotBadgeText) elBadge.textContent = `${shotBadgeText} (${this.arcadeScore}PT)`;
+    if (elBadge && shotBadgeText) elBadge.textContent = `${shotBadgeText}`;
   }
 
-  // =========================================================
-  // COMMODORE 64 ANIMATED STADIUM TRIBUNA (BLEACHER CROWD)
-  // =========================================================
   _drawCommodore64Crowd(ctx) {
     const isCheering = this.crowdCheerTimer > 0;
     const speedDiv = isCheering ? 5 : 14;
 
-    // Concrete Stadium Tiers (2 C64 Bleacher Steps)
     ctx.fillStyle = '#1e2436';
-    ctx.fillRect(0, 0, COURT.WIDTH, 34);
+    ctx.fillRect(0, 0, COURT.WIDTH, 36);
     ctx.fillStyle = '#2b334a';
-    ctx.fillRect(8, 3, 304, 13);
-    ctx.fillRect(8, 17, 304, 14);
+    ctx.fillRect(8, 3, 304, 14);
+    ctx.fillRect(8, 18, 304, 14);
 
-    // Bleacher Guardrail & C64 Club Banners
     ctx.fillStyle = '#0f141f';
-    ctx.fillRect(8, 30, 304, 4);
+    ctx.fillRect(8, 32, 304, 4);
 
-    // Draw each 8-bit C64 Spectator Sprite
     for (let i = 0; i < this.crowdFans.length; i++) {
       const fan = this.crowdFans[i];
       const animStep = Math.floor((this.frameTick + fan.phase) / speedDiv) % 2;
@@ -380,21 +423,17 @@ export class PadelGameEngine {
       const fx = fan.x;
       const fy = fan.baseY + jumpY;
 
-      // Hair & Head (4x4 pixel block)
       ctx.fillStyle = fan.hair;
       ctx.fillRect(fx + 2, fy, 5, 2);
       ctx.fillStyle = '#fed7aa';
       ctx.fillRect(fx + 2, fy + 2, 5, 3);
-      // Eyes (C64 1-pixel eyes)
       ctx.fillStyle = '#090d16';
       ctx.fillRect(fx + 3, fy + 3, 1, 1);
       ctx.fillRect(fx + 5, fy + 3, 1, 1);
 
-      // Torso (Jersey)
       ctx.fillStyle = fan.shirt;
       ctx.fillRect(fx + 1, fy + 5, 7, 5);
 
-      // C64 Waving Arms (Frame 0: arms up cheering, Frame 1: arms down/clapping)
       if (animStep === 0) {
         ctx.fillStyle = fan.shirt;
         ctx.fillRect(fx - 1, fy + 2, 2, 4);
@@ -403,7 +442,6 @@ export class PadelGameEngine {
         ctx.fillRect(fx - 1, fy + 1, 2, 1);
         ctx.fillRect(fx + 8, fy + 1, 2, 1);
 
-        // Some fans wave a yellow/green Republic scarf overhead!
         if (fan.hasScarf && isCheering) {
           ctx.fillStyle = '#f7c11e';
           ctx.fillRect(fx - 1, fy - 1, 11, 2);
@@ -417,7 +455,6 @@ export class PadelGameEngine {
       }
     }
 
-    // Random Stadium Camera Flashbulb in the Bleachers during rallies/points
     if (isCheering && this.frameTick % 9 === 0) {
       const flashX = 32 + ((this.frameTick * 37) % 250);
       const flashY = 6 + ((this.frameTick * 13) % 18);
@@ -426,13 +463,10 @@ export class PadelGameEngine {
     }
   }
 
-  // =========================================================
-  // 2.5D PADEL CAGE WALLS (TEMPERED GLASS + METALLIC MESH)
-  // =========================================================
   _drawPadelCageWalls(ctx) {
     const wallHit = this.ball.lastWallHit;
 
-    // 1. NORTH BACK GLASS WALL (y: 34..50)
+    // 1. NORTH BACK GLASS WALL (y: 36..54)
     for (let x = COURT.LEFT; x < COURT.RIGHT; x += 40) {
       const panelW = Math.min(40, COURT.RIGHT - x);
       const isHitPanel =
@@ -441,57 +475,48 @@ export class PadelGameEngine {
         wallHit.wall === 'top' &&
         Math.abs(wallHit.x - (x + panelW / 2)) < 28;
 
-      // Translucent Crystal Glass Panel
       ctx.fillStyle = isHitPanel
         ? 'rgba(247, 193, 30, 0.55)'
         : 'rgba(125, 211, 252, 0.24)';
-      ctx.fillRect(x, 34, panelW, 16);
+      ctx.fillRect(x, 36, panelW, 18);
 
-      // Diagonal Pixel Specular Glint on Glass
       ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-      ctx.fillRect(x + 6, 37, 8, 2);
-      ctx.fillRect(x + 10, 39, 8, 2);
+      ctx.fillRect(x + 6, 39, 8, 2);
+      ctx.fillRect(x + 10, 41, 8, 2);
 
-      // Steel Structural Pillar (Montante)
       ctx.fillStyle = '#0f172a';
-      ctx.fillRect(x, 33, 3, 17);
+      ctx.fillRect(x, 35, 3, 19);
     }
-    // Rightmost pillar
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(COURT.RIGHT - 2, 33, 3, 17);
+    ctx.fillRect(COURT.RIGHT - 2, 35, 3, 19);
 
-    // Top horizontal steel rail of the glass wall
     ctx.fillStyle = '#334155';
-    ctx.fillRect(COURT.LEFT - 2, 33, COURT.RIGHT - COURT.LEFT + 4, 2);
+    ctx.fillRect(COURT.LEFT - 2, 35, COURT.RIGHT - COURT.LEFT + 4, 2);
 
-    // Sponsor Banner along North Wall Base ("REPUBLIC // REBRUNCH")
     ctx.fillStyle = '#111520';
-    ctx.fillRect(COURT.LEFT + 34, 42, 176, 8);
+    ctx.fillRect(COURT.LEFT + 34, 44, 176, 9);
     ctx.fillStyle = '#f7c11e';
     ctx.font = '5px "Press Start 2P", monospace';
-    ctx.fillText('REPUBLIC * REBRUNCH * JESOLO', COURT.LEFT + 42, 48);
+    ctx.fillText('REPUBLIC * REBRUNCH * JESOLO', COURT.LEFT + 42, 50);
 
-    // 2. LEFT & RIGHT 2.5D SIDE WALLS (Glass at ends + Metallic Mesh near Net)
+    // 2. LEFT & RIGHT 2.5D SIDE WALLS
     const wallThickness = 14;
-    // Left Wall Strip (x: COURT.LEFT - wallThickness .. COURT.LEFT)
-    // Right Wall Strip (x: COURT.RIGHT .. COURT.RIGHT + wallThickness)
-    for (let y = COURT.TOP; y < COURT.BOTTOM; y += 28) {
-      const segH = Math.min(28, COURT.BOTTOM - y);
+    for (let y = COURT.TOP; y < COURT.BOTTOM; y += 30) {
+      const segH = Math.min(30, COURT.BOTTOM - y);
       const midY = y + segH / 2;
-      const isMeshZone = Math.abs(midY - COURT.NET_Y) < 38;
+      const isMeshZone = Math.abs(midY - COURT.NET_Y) < 46;
 
       const leftHit =
         wallHit &&
         wallHit.timer > 0 &&
         wallHit.wall === 'left' &&
-        Math.abs(wallHit.y - midY) < 22;
+        Math.abs(wallHit.y - midY) < 24;
       const rightHit =
         wallHit &&
         wallHit.timer > 0 &&
         wallHit.wall === 'right' &&
-        Math.abs(wallHit.y - midY) < 22;
+        Math.abs(wallHit.y - midY) < 24;
 
-      // Left Side Panel
       ctx.fillStyle = leftHit
         ? 'rgba(247, 193, 30, 0.65)'
         : isMeshZone
@@ -499,7 +524,6 @@ export class PadelGameEngine {
           : 'rgba(125, 211, 252, 0.25)';
       ctx.fillRect(COURT.LEFT - wallThickness, y, wallThickness, segH);
 
-      // Right Side Panel
       ctx.fillStyle = rightHit
         ? 'rgba(247, 193, 30, 0.65)'
         : isMeshZone
@@ -507,7 +531,6 @@ export class PadelGameEngine {
           : 'rgba(125, 211, 252, 0.25)';
       ctx.fillRect(COURT.RIGHT, y, wallThickness, segH);
 
-      // Draw Cross-Hatched Metallic Wire Mesh Pattern in the Central Zone
       if (isMeshZone) {
         ctx.fillStyle = '#94a3b8';
         for (let my = y + 2; my < y + segH - 2; my += 4) {
@@ -515,34 +538,30 @@ export class PadelGameEngine {
           ctx.fillRect(COURT.RIGHT + 2, my, wallThickness - 5, 1);
         }
       } else {
-        // Glass reflection glint on side glass panels
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.fillRect(COURT.LEFT - wallThickness + 3, y + 5, 3, 8);
         ctx.fillRect(COURT.RIGHT + wallThickness - 6, y + 5, 3, 8);
       }
 
-      // Steel Structural Post between side panels
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(COURT.LEFT - wallThickness, y, wallThickness, 2);
       ctx.fillRect(COURT.RIGHT, y, wallThickness, 2);
     }
 
-    // Outer Side Cage Borders
     ctx.strokeStyle = '#67e8f9';
     ctx.lineWidth = 2;
     ctx.strokeRect(COURT.LEFT - wallThickness, COURT.TOP, wallThickness, COURT.BOTTOM - COURT.TOP);
     ctx.strokeRect(COURT.RIGHT, COURT.TOP, wallThickness, COURT.BOTTOM - COURT.TOP);
 
-    // 3. SOUTH BOTTOM FOREGROUND GLASS WALL (y: COURT.BOTTOM .. COURT.BOTTOM + 10)
+    // 3. SOUTH BOTTOM FOREGROUND GLASS WALL
     const southHit = wallHit && wallHit.timer > 0 && wallHit.wall === 'bottom';
     ctx.fillStyle = southHit ? 'rgba(247, 193, 30, 0.5)' : 'rgba(125, 211, 252, 0.22)';
-    ctx.fillRect(COURT.LEFT, COURT.BOTTOM, COURT.RIGHT - COURT.LEFT, 9);
+    ctx.fillRect(COURT.LEFT, COURT.BOTTOM, COURT.RIGHT - COURT.LEFT, 10);
     for (let x = COURT.LEFT; x <= COURT.RIGHT; x += 40) {
       ctx.fillStyle = '#0f172a';
-      ctx.fillRect(x - 1, COURT.BOTTOM, 3, 10);
+      ctx.fillRect(x - 1, COURT.BOTTOM, 3, 11);
     }
 
-    // 4. Wall Impact Shockwave Ring if recently hit
     if (wallHit && wallHit.timer > 0) {
       const r = (18 - wallHit.timer) * 1.2;
       ctx.strokeStyle = wallHit.isMesh ? '#f7c11e' : '#67e8f9';
@@ -551,9 +570,6 @@ export class PadelGameEngine {
     }
   }
 
-  // =========================================================
-  // SHOT TRAJECTORY PREVIEW ARC WHILE CHARGING
-  // =========================================================
   _drawChargeTrajectoryPreview(ctx) {
     if (!this.human.isCharging || this.human.charge < 5) return;
 
@@ -563,8 +579,8 @@ export class PadelGameEngine {
     else if (this.input.keys.right) aimX = 1.0;
 
     const color = this.human.charge > 72 ? '#ef4444' : (this.human.charge <= 25 ? '#38bdf8' : '#f7c11e');
-    const distY = 48 + t * 92;
-    const targetX = Math.max(COURT.LEFT + 12, Math.min(COURT.RIGHT - 12, this.human.x + aimX * (25 + t * 48)));
+    const distY = 58 + t * 115;
+    const targetX = Math.max(COURT.LEFT + 12, Math.min(COURT.RIGHT - 12, this.human.x + aimX * (25 + t * 52)));
     const targetY = Math.max(COURT.TOP + 10, this.human.y - distY);
 
     ctx.fillStyle = color;
@@ -580,24 +596,23 @@ export class PadelGameEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
-    // 1. Exterior Surroundings (Sky-Blue / Slate Apron from Republic Moodboard)
+    // 1. Exterior Surroundings
     ctx.fillStyle = '#1b2436';
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
     // 2. Commodore 64 Animated Stadium Bleacher Crowd at Top
     this._drawCommodore64Crowd(ctx);
 
-    // 3. Sage-Emerald Padel Turf (Matching Republic Reference Palette)
+    // 3. Sage-Emerald Padel Turf
     ctx.fillStyle = '#3b8c66';
     ctx.fillRect(COURT.LEFT, COURT.TOP, COURT.RIGHT - COURT.LEFT, COURT.BOTTOM - COURT.TOP);
 
-    // Checkerboard 8-bit turf stripes
     ctx.fillStyle = '#337a58';
     for (let y = COURT.TOP; y < COURT.BOTTOM; y += 16) {
       ctx.fillRect(COURT.LEFT, y, COURT.RIGHT - COURT.LEFT, 8);
     }
 
-    // Blue Service Apron Bands (Matching Moodboard "GAMEPLAY & PADEL")
+    // Blue Service Apron Bands
     ctx.fillStyle = '#3898d4';
     ctx.fillRect(COURT.LEFT, COURT.TOP, COURT.RIGHT - COURT.LEFT, COURT.SERVICE_TOP - COURT.TOP);
     ctx.fillRect(COURT.LEFT, COURT.SERVICE_BOTTOM, COURT.RIGHT - COURT.LEFT, COURT.BOTTOM - COURT.SERVICE_BOTTOM);
@@ -616,7 +631,7 @@ export class PadelGameEngine {
     ctx.lineTo(160, COURT.SERVICE_BOTTOM);
     ctx.stroke();
 
-    // 5. 2.5D Padel Cage Walls (Tempered Glass + Metallic Mesh + Impact Flash)
+    // 5. 2.5D Padel Cage Walls
     this._drawPadelCageWalls(ctx);
 
     // 6. Ground Bounce Dust Ring
@@ -628,7 +643,7 @@ export class PadelGameEngine {
       ctx.strokeRect(Math.round(gb.x - rad), Math.round(gb.y - rad), Math.round(rad * 2), Math.round(rad * 2));
     }
 
-    // 7. Landing Target Crosshair (Mario Tennis GBC style)
+    // 7. Landing Target Crosshair
     if (this.ball.inPlay) {
       const tx = Math.round(this.ball.landingTarget.x);
       const ty = Math.round(this.ball.landingTarget.y);
@@ -643,12 +658,10 @@ export class PadelGameEngine {
     this.cpuLeft.draw(ctx);
     this.cpuRight.draw(ctx);
 
-    // 9. Central Padel Net with Posts & 8-bit Mesh Pattern
-    // Net Posts
+    // 9. Central Padel Net
     ctx.fillStyle = '#64748b';
     ctx.fillRect(COURT.LEFT - 4, COURT.NET_Y - 5, 4, 9);
     ctx.fillRect(COURT.RIGHT, COURT.NET_Y - 5, 4, 9);
-    // Net Mesh & White Tape
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(COURT.LEFT - 2, COURT.NET_Y - 2, COURT.RIGHT - COURT.LEFT + 4, 5);
     ctx.fillStyle = '#f8fafc';
@@ -656,7 +669,7 @@ export class PadelGameEngine {
       ctx.fillRect(x, COURT.NET_Y - 3, 4, 2);
     }
 
-    // 10. Shot Trajectory Preview Arc while Charging
+    // 10. Shot Trajectory Preview Arc
     this._drawChargeTrajectoryPreview(ctx);
 
     // 11. Bottom Players (Human + Partner)
@@ -675,11 +688,9 @@ export class PadelGameEngine {
       });
     }
 
-    // Ground shadow at (x, y)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.fillRect(bx - 2, by - 1, 5, 3);
 
-    // Elevated Ball at (x, y - z)
     const size = bz > 22 ? 6 : 5;
     ctx.fillStyle = this.ball.isSmash ? '#fb923c' : '#d9f99d';
     ctx.fillRect(bx - 2, by - bz - 2, size, size);
@@ -687,7 +698,7 @@ export class PadelGameEngine {
     ctx.lineWidth = 1;
     ctx.strokeRect(bx - 2, by - bz - 2, size, size);
 
-    // 13. Hit Sparks & Confetti Particles
+    // 13. Hit Sparks
     for (let i = 0; i < this.particles.length; i++) {
       const p = this.particles[i];
       ctx.fillStyle = p.color;
@@ -697,15 +708,15 @@ export class PadelGameEngine {
     // 14. Retro Event Banner
     if (this.bannerTimer > 0 && this.bannerText) {
       ctx.fillStyle = 'rgba(17, 21, 32, 0.88)';
-      ctx.fillRect(26, 124, 268, 28);
+      ctx.fillRect(22, 162, 276, 28);
       ctx.strokeStyle = '#f7c11e';
       ctx.lineWidth = 2;
-      ctx.strokeRect(26, 124, 268, 28);
+      ctx.strokeRect(22, 162, 276, 28);
 
       ctx.fillStyle = '#f7c11e';
-      ctx.font = '7px "Press Start 2P", monospace';
+      ctx.font = '6.5px "Press Start 2P", monospace';
       const tw = ctx.measureText(this.bannerText).width;
-      ctx.fillText(this.bannerText, Math.round(160 - tw / 2), 141);
+      ctx.fillText(this.bannerText, Math.round(160 - tw / 2), 179);
     }
   }
 }

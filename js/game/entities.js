@@ -1,6 +1,7 @@
-// js/game/entities.js - 4 Padel Players with 16x16 Pixel-Art Sprites, Magnetic Assist & Forgiving Hitbox
+// js/game/entities.js - 4 Padel Players with Selectable Character Skins, Tasto A / Tasto B / Dash & Magnetic Assist
 
 import { COURT } from './physics.js';
+import { sound } from './audio.js';
 
 const SPRITE_FRAMES = [
   [
@@ -41,42 +42,56 @@ const SPRITE_FRAMES = [
   ]
 ];
 
+export const CHARACTER_SKINS = {
+  classic: { label: 'REPUBLIC CLASSIC', 1: '#7dd3fc', 2: '#fed7aa', 3: '#f7c11e' },
+  bomber:  { label: 'BOMBER VERDE',     1: '#9ad932', 2: '#fed7aa', 3: '#111827' },
+  queen:   { label: 'PINK QUEEN',       1: '#ec4899', 2: '#fbcfe8', 3: '#fde047' },
+  c64:     { label: 'RETRO C64',        1: '#a855f7', 2: '#e9d5ff', 3: '#38bdf8' },
+};
+
 export const PALETTES = {
-  human:     { 1: '#7dd3fc', 2: '#fed7aa', 3: '#f7c11e' }, // Republic Mascot Cyan / Gold headband
-  partner:   { 1: '#9ad932', 2: '#fed7aa', 3: '#ffffff' }, // Rebrunch Lime / White
-  cpuLeft:   { 1: '#ef4444', 2: '#fecdd3', 3: '#fde047' }, // Aperitivo Red / Gold
-  cpuRight:  { 1: '#f59e0b', 2: '#fde68a', 3: '#38bdf8' }, // Gold / Cyan
+  human:     CHARACTER_SKINS.classic,
+  partner:   { 1: '#9ad932', 2: '#fed7aa', 3: '#ffffff' },
+  cpuLeft:   { 1: '#ef4444', 2: '#fecdd3', 3: '#fde047' },
+  cpuRight:  { 1: '#f59e0b', 2: '#fde68a', 3: '#38bdf8' },
 };
 
 export class PadelPlayer {
   constructor({ id, name, team, side, x, y, isHuman = false, palette }) {
     this.id = id;
     this.name = name;
-    this.team = team; // 'player' (bottom) or 'cpu' (top)
-    this.side = side; // 'left' or 'right'
+    this.team = team;
+    this.side = side;
     this.homeX = x;
     this.homeY = y;
     this.x = x;
     this.y = y;
     this.vx = 0;
     this.vy = 0;
-    this.speed = isHuman ? 2.55 : 2.02;
+    this.speed = isHuman ? 2.65 : 2.1;
     this.isHuman = isHuman;
     this.palette = palette;
 
     // Animation & Action States
     this.animFrame = 0;
     this.animTimer = 0;
-    this.charge = 0;       // 0 to 100
+    this.charge = 0;
     this.isCharging = false;
     this.diveTimer = 0;
+    this.dashCooldown = 0;
     this.swingTimer = 0;
     this.calloutText = '';
     this.calloutTimer = 0;
 
-    // Forgiving hitbox constants for mobile playability
-    this.hitRadius = isHuman ? 39 : 27;
-    this.diveHitRadius = isHuman ? 54 : 38;
+    // Forgiving hitbox constants
+    this.hitRadius = isHuman ? 40 : 28;
+    this.diveHitRadius = isHuman ? 56 : 39;
+  }
+
+  setSkin(skinKey) {
+    if (CHARACTER_SKINS[skinKey]) {
+      this.palette = CHARACTER_SKINS[skinKey];
+    }
   }
 
   resetPosition() {
@@ -87,6 +102,7 @@ export class PadelPlayer {
     this.charge = 0;
     this.isCharging = false;
     this.diveTimer = 0;
+    this.dashCooldown = 0;
     this.swingTimer = 0;
   }
 
@@ -95,18 +111,20 @@ export class PadelPlayer {
     this.calloutTimer = frames;
   }
 
-  triggerDive(dirX, dirY) {
-    if (this.diveTimer > 0) return;
-    this.diveTimer = 18;
+  triggerDashOrDive(dirX, dirY, isDiveToBall = false) {
+    if (this.diveTimer > 0 || this.dashCooldown > 0) return;
+    this.diveTimer = 15;
+    this.dashCooldown = 26;
     const mag = Math.hypot(dirX, dirY) || 1;
-    this.vx = (dirX / mag) * 4.3;
-    this.vy = (dirY / mag) * 3.5;
-    this.say('RECUPERO!', 32);
+    this.vx = (dirX / mag) * 4.7;
+    this.vy = (dirY / mag) * 4.0;
+    sound.dashSwoosh();
+    this.say(isDiveToBall ? 'TUFFO!' : 'DASH! ⚡', 26);
   }
 
   canReachBall(ball) {
     const reach = this.diveTimer > 0 ? this.diveHitRadius : this.hitRadius;
-    const maxZ = this.isHuman ? 39 : 32;
+    const maxZ = this.isHuman ? 40 : 33;
     const dist = Math.hypot(ball.x - this.x, ball.y - this.y);
     return dist <= reach && ball.z <= maxZ;
   }
@@ -114,6 +132,7 @@ export class PadelPlayer {
   updateHuman(input, ball) {
     if (this.calloutTimer > 0) this.calloutTimer--;
     if (this.swingTimer > 0) this.swingTimer--;
+    if (this.dashCooldown > 0) this.dashCooldown--;
 
     if (this.diveTimer > 0) {
       this.diveTimer--;
@@ -144,9 +163,9 @@ export class PadelPlayer {
     // Subtle Magnetic Ball-Assist when ball is incoming on human's side
     if (ball.inPlay && ball.lastHitterTeam === 'cpu' && ball.landingTarget.y > COURT.NET_Y) {
       const distToLanding = Math.hypot(ball.landingTarget.x - this.x, ball.landingTarget.y - this.y);
-      if (distToLanding > 6 && distToLanding < 70 && (dx !== 0 || dy !== 0)) {
-        this.vx += ((ball.landingTarget.x - this.x) / distToLanding) * 0.38;
-        this.vy += ((ball.landingTarget.y - this.y) / distToLanding) * 0.32;
+      if (distToLanding > 6 && distToLanding < 76 && (dx !== 0 || dy !== 0)) {
+        this.vx += ((ball.landingTarget.x - this.x) / distToLanding) * 0.42;
+        this.vy += ((ball.landingTarget.y - this.y) / distToLanding) * 0.36;
       }
     }
 
@@ -163,12 +182,11 @@ export class PadelPlayer {
       this.animFrame = 0;
     }
 
-    // Charge shot while holding ActionA (Green or Red button / Space)
+    // 1. TASTO A (Green Button / Space): Charge Shot (Drive / Bandeja / Vibora / Smash)
     if (input.keys.actionA) {
       this.isCharging = true;
-      this.charge = Math.min(100, this.charge + 3.1);
+      this.charge = Math.min(100, this.charge + 3.2);
 
-      // Auto-release when ball enters optimal strike window and charge is high
       if (ball.inPlay && ball.lastHitterTeam !== this.team && this.canReachBall(ball) && this.charge >= 88) {
         const firedCharge = this.charge;
         this.isCharging = false;
@@ -177,7 +195,6 @@ export class PadelPlayer {
         return { type: 'charged_shot', charge: firedCharge, aimX: dx };
       }
     } else if (this.isCharging) {
-      // Released button -> fire shot with current charge (0..100)
       const firedCharge = this.charge;
       this.isCharging = false;
       this.charge = 0;
@@ -185,17 +202,26 @@ export class PadelPlayer {
       return { type: 'charged_shot', charge: firedCharge, aimX: dx };
     }
 
-    // ActionB (Yellow button / Z): Lob if close to ball, or Dive if ball is far away
+    // 2. TASTO B (Red Button / Z): Pallonetto / Lob
     if (input.keys.actionB) {
       input.keys.actionB = false;
-      const dist = Math.hypot(ball.x - this.x, ball.y - this.y);
-      if (ball.inPlay && dist > this.hitRadius && dist < 85) {
-        this.triggerDive(ball.x - this.x, ball.y - this.y);
-        this.swingTimer = 14;
-        return { type: 'dive_shot', charge: 35, aimX: dx };
-      }
       this.swingTimer = 14;
-      return { type: 'lob', charge: 50, aimX: dx };
+      return { type: 'lob', charge: 55, aimX: dx };
+    }
+
+    // 3. DASH (Yellow Button / X): Sprint Dash or Dive Recupero toward Ball
+    if (input.keys.actionDash) {
+      input.keys.actionDash = false;
+      const dist = Math.hypot(ball.x - this.x, ball.y - this.y);
+      if (ball.inPlay && dist > 12 && dist < 96) {
+        this.triggerDashOrDive(ball.x - this.x, ball.y - this.y, true);
+        this.swingTimer = 14;
+        return { type: 'dive_shot', charge: 42, aimX: dx };
+      } else {
+        const dashDirX = dx !== 0 ? dx : (ball.x > this.x ? 1 : -1);
+        const dashDirY = dy !== 0 ? dy : -0.35;
+        this.triggerDashOrDive(dashDirX, dashDirY, false);
+      }
     }
 
     return null;
@@ -220,7 +246,7 @@ export class PadelPlayer {
 
     // Subtle strike-zone ring for human player
     if (this.isHuman) {
-      ctx.strokeStyle = this.isCharging ? 'rgba(247, 193, 30, 0.65)' : 'rgba(154, 217, 50, 0.3)';
+      ctx.strokeStyle = this.isCharging ? 'rgba(247, 193, 30, 0.65)' : 'rgba(154, 217, 50, 0.32)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(Math.round(this.x), Math.round(this.y), 14, 0, Math.PI * 2);
