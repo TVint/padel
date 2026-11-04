@@ -1,430 +1,546 @@
-/**
- * REBRUNCH // Republic Sport Village - Main Application Controller (js/app.js)
- * Manages Game Boy Color LCD screens, dynamic form logic, pixel-art hero illustration,
- * Pokémon-style Professor Oak dialogues, localStorage persistence, and Hall of Fame API.
- */
+// js/app.js - REBRUNCH // Republic Sport Village - GBC Advergame Frontend Controller
 
 import { sound } from './game/audio.js';
-import { InputController } from './game/touch.js';
+import { GBCInputController } from './game/touch.js';
 import { PadelGameEngine } from './game/engine.js';
 
-const STORAGE_PLAYER_KEY = 'rebrunch_gbc_player_v1';
+const input = new GBCInputController();
+let gameEngine = null;
+let currentView = 'view-intro';
+let lastMatchScore = 0;
+let volumeOsdTimeout = null;
 
-// Ironic Pokémon-style messages when pressing shell buttons outside a match
-const OAK_QUOTES = [
-    'PROF. OAK: "C\'è un tempo e un luogo per ogni cosa, ma non ora!"',
-    'DJ SET: "🎵 Bassline 8-bit a 128 BPM in corso al Republic!"',
-    'ARBITRO: "Iscriviti al REBRUNCH del 29 Novembre per scendere in campo!"',
-    'CHEF BRUNCH: "Avocado Toast, Club Sandwich e Pancake ti aspettano dalle 10:00!"',
-    'CONSIGLIO PRO: "A rete premi [ROSSO] sulle palle alte per lo SMASH X3!"'
-];
-
-document.addEventListener('DOMContentLoaded', () => {
-    // ------------------------------------------------------------------------
-    // 1. DOM ELEMENTS
-    // ------------------------------------------------------------------------
-    const viewIntro   = document.getElementById('view-intro');
-    const viewForm    = document.getElementById('view-form');
-    const viewGame    = document.getElementById('view-game');
-    const curtainEl   = document.getElementById('lcd-curtain');
-    const pokeToast   = document.getElementById('poke-toast');
-    const ledRed      = document.getElementById('led-red');
-    const ledGreen    = document.getElementById('led-green');
-    const btnAudio    = document.getElementById('btn-audio-toggle');
-
-    // Intro buttons
-    const btnGoForm      = document.getElementById('btn-go-form');
-    const btnAlreadyReg  = document.getElementById('btn-already-reg');
-    const btnBackIntro   = document.getElementById('btn-back-intro');
-    const btnBackFromGame = document.getElementById('btn-game-menu');
-
-    // Form elements
-    const regForm        = document.getElementById('rebrunch-form');
-    const padelSubpanel  = document.getElementById('padel-subpanel');
-    const brunchSubpanel = document.getElementById('brunch-subpanel');
-    const formErrorEl    = document.getElementById('form-error-msg');
-
-    // Game & Hall of Fame elements
-    const padelCanvas     = document.getElementById('padel-canvas');
-    const hudScoreEl      = document.getElementById('hud-score');
-    const hudPlayerNameEl = document.getElementById('hud-player-name');
-    const matchModal      = document.getElementById('match-over-modal');
-    const modalTitleEl    = document.getElementById('modal-result-title');
-    const modalScoreEl    = document.getElementById('modal-result-score');
-    const btnSaveScore    = document.getElementById('btn-save-hof');
-    const btnRematch      = document.getElementById('btn-play-again');
-    const hofListEl       = document.getElementById('hof-list');
-
-    let currentView = 'intro';
-    let toastTimer = null;
-    let lastMatchResult = null;
-
-    // ------------------------------------------------------------------------
-    // 2. DRAW PIXEL-ART HERO ILLUSTRATION (PANCAKES, TOAST, RACQUETS)
-    // ------------------------------------------------------------------------
-    drawHeroPixelIllustration(document.getElementById('hero-art-canvas'));
-
-    // ------------------------------------------------------------------------
-    // 3. FLOATING POKÉMON TOAST DIALOGUE
-    // ------------------------------------------------------------------------
-    function showPokeToast(message, duration = 3200) {
-        if (!pokeToast) return;
-        pokeToast.innerHTML = `${message} <span style="color:#d33636;">▼</span>`;
-        pokeToast.classList.add('visible');
-        if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-            pokeToast.classList.remove('visible');
-        }, duration);
-    }
-
-    // ------------------------------------------------------------------------
-    // 4. INITIALIZE INPUT CONTROLLER & SUPER PADEL DX 2v2 ENGINE
-    // ------------------------------------------------------------------------
-    const inputCtrl = new InputController((key, label) => {
-        // When user clicks physical D-Pad or Arcade Buttons outside the game:
-        if (currentView === 'intro' && key === 'hit') {
-            switchView('form', 'CARICAMENTO SCHEDA...');
-            return;
-        }
-        const quote = OAK_QUOTES[Math.floor(Math.random() * OAK_QUOTES.length)];
-        showPokeToast(`[${label}] ${quote}`);
+// =========================================================
+// 1. CLICK ANALYTICS TRACKING (api/click.php)
+// =========================================================
+async function trackAreaClick(areaClicked) {
+  try {
+    await fetch('api/click.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ area_clicked: areaClicked }),
     });
+  } catch (_) {
+    // Non-blocking analytics
+  }
+}
 
-    const gameEngine = new PadelGameEngine(padelCanvas, inputCtrl, {
-        onScoreUpdate(pScore, cScore) {
-            hudScoreEl.textContent = `NOI ${pScore} - ${cScore} LORO`;
-        },
-        onSmash() {
-            ledRed?.classList.add('pulse');
-            setTimeout(() => ledRed?.classList.remove('pulse'), 900);
-        },
-        onMatchEnd(result) {
-            lastMatchResult = result;
-            modalTitleEl.textContent = result.won ? '🏆 VITTORIA EPICA!' : '💥 FINE PARTITA!';
-            modalTitleEl.style.color = result.won ? '#6bc947' : '#f5b82e';
-            modalScoreEl.textContent = `PUNTEGGIO FINALE: NOI ${result.playerScore} - LORO ${result.cpuScore}`;
-            btnSaveScore.disabled = false;
-            btnSaveScore.textContent = '[ 🏆 REGISTRA NELLA HALL OF FAME ]';
-            matchModal.classList.add('active');
-        }
-    });
+// =========================================================
+// 2. LCD VIEW NAVIGATION
+// =========================================================
+function showView(viewId) {
+  currentView = viewId;
+  document.querySelectorAll('.lcd-view').forEach((el) => {
+    el.classList.toggle('active', el.id === viewId);
+  });
 
-    // ------------------------------------------------------------------------
-    // 5. LCD VIEW TRANSITION WITH ARCADE CURTAIN
-    // ------------------------------------------------------------------------
-    function switchView(targetView, curtainText = 'LOADING...') {
-        sound.playButtonA();
-        curtainEl.textContent = curtainText;
-        curtainEl.classList.add('closing');
+  const lcd = document.getElementById('lcd-screen');
+  if (lcd) lcd.scrollTop = 0;
 
-        setTimeout(() => {
-            viewIntro.classList.toggle('active', targetView === 'intro');
-            viewForm.classList.toggle('active', targetView === 'form');
-            viewGame.classList.toggle('active', targetView === 'game');
-            currentView = targetView;
-
-            if (targetView === 'game') {
-                const saved = getSavedPlayer();
-                if (saved) {
-                    hudPlayerNameEl.textContent = saved.full_name.split(' ')[0].toUpperCase();
-                    gameEngine.configurePlayerNames(saved.full_name, saved.partner_name);
-                }
-                matchModal.classList.remove('active');
-                gameEngine.startNewMatch();
-                ledGreen?.classList.add('pulse');
-                loadHallOfFame();
-            } else {
-                gameEngine.stop();
-                ledGreen?.classList.remove('pulse');
-            }
-
-            setTimeout(() => {
-                curtainEl.classList.remove('closing');
-            }, 180);
-        }, 360);
-    }
-
-    // ------------------------------------------------------------------------
-    // 6. LOCALSTORAGE CHECK & FORM DYNAMIC FIELDS
-    // ------------------------------------------------------------------------
-    function getSavedPlayer() {
-        try {
-            const raw = localStorage.getItem(STORAGE_PLAYER_KEY);
-            return raw ? JSON.parse(raw) : null;
-        } catch {
-            return null;
-        }
-    }
-
-    function updateSavedPlayerUI() {
-        const saved = getSavedPlayer();
-        if (saved && btnAlreadyReg) {
-            btnAlreadyReg.style.display = 'block';
-            btnAlreadyReg.textContent = `🎮 GIÀ ISCRITTO (${saved.full_name.split(' ')[0].toUpperCase()})? VAI AL CAMPO!`;
-        }
-    }
-    updateSavedPlayerUI();
-
-    // Dynamic radio listeners for Activity (Padel Doppio / Tennis Singolo / Solo Brunch)
-    document.querySelectorAll('input[name="activity"]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            sound.playDpadClick();
-            const val = document.querySelector('input[name="activity"]:checked')?.value;
-            padelSubpanel.style.display = val === 'padel' ? 'block' : 'none';
-
-            // If user picks "Solo Brunch", auto-enable Brunch section
-            if (val === 'brunch_only') {
-                const brunchYes = document.querySelector('input[name="join_brunch"][value="1"]');
-                if (brunchYes) {
-                    brunchYes.checked = true;
-                    brunchSubpanel.style.display = 'block';
-                }
-            }
-        });
-    });
-
-    // Dynamic radio listeners for Brunch (Sì / No)
-    document.querySelectorAll('input[name="join_brunch"]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            sound.playDpadClick();
-            const val = document.querySelector('input[name="join_brunch"]:checked')?.value;
-            brunchSubpanel.style.display = val === '1' ? 'block' : 'none';
-        });
-    });
-
-    // Navigation buttons
-    btnGoForm?.addEventListener('click', () => switchView('form', 'APERTURA SCHEDA GIOCATORE...'));
-    btnAlreadyReg?.addEventListener('click', () => switchView('game', 'SBLOCCO SUPER PADEL DX 2V2...'));
-    btnBackIntro?.addEventListener('click', () => switchView('intro', 'RITORNO ALLA LOCANDINA...'));
-    btnBackFromGame?.addEventListener('click', () => switchView('intro', 'PAUSA PARTITA...'));
-
-    btnAudio?.addEventListener('click', () => {
-        const on = sound.toggle();
-        btnAudio.textContent = on ? '🔊 AUDIO: ON' : '🔇 AUDIO: OFF';
-    });
-
-    // ------------------------------------------------------------------------
-    // 7. FORM SUBMISSION -> API/REGISTER.PHP -> UNLOCK GAME
-    // ------------------------------------------------------------------------
-    regForm?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        formErrorEl.style.display = 'none';
-
-        const formData = new FormData(regForm);
-        const payload = {
-            full_name:      (formData.get('full_name') || '').toString().trim(),
-            phone:          (formData.get('phone') || '').toString().trim(),
-            activity:       (formData.get('activity') || 'padel').toString(),
-            padel_category: (formData.get('padel_category') || 'Misto').toString(),
-            partner_name:   (formData.get('partner_name') || '').toString().trim(),
-            join_brunch:    formData.get('join_brunch') === '1',
-            brunch_seats:   Number(formData.get('brunch_seats') || 1),
-            dietary_notes:  (formData.get('dietary_notes') || '').toString().trim()
-        };
-
-        if (!payload.full_name || !payload.phone) {
-            formErrorEl.textContent = '⚠️ INSERISCI NOME E TELEFONO!';
-            formErrorEl.style.display = 'block';
-            sound.playPoint(false);
-            return;
-        }
-
-        try {
-            const res = await fetch('api/register.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (!res.ok || !data.ok) {
-                throw new Error(data.error || 'Errore di registrazione');
-            }
-
-            localStorage.setItem(STORAGE_PLAYER_KEY, JSON.stringify(data.player));
-            updateSavedPlayerUI();
-            sound.playLevelUpJingle();
-            switchView('game', '🎉 ISCRIZIONE COMPLETATA! SBLOCCO SUPER PADEL DX...');
-            setTimeout(() => {
-                showPokeToast(`BENVENUTO IN CAMPO, ${data.player.full_name.toUpperCase()}!`);
-            }, 900);
-        } catch (err) {
-            // Fallback if offline: still save in localStorage and unlock game
-            localStorage.setItem(STORAGE_PLAYER_KEY, JSON.stringify(payload));
-            updateSavedPlayerUI();
-            sound.playLevelUpJingle();
-            switchView('game', '🎉 SBLOCCO SUPER PADEL DX 2V2...');
-        }
-    });
-
-    // ------------------------------------------------------------------------
-    // 8. HALL OF FAME (API/SAVE_MATCH.PHP)
-    // ------------------------------------------------------------------------
-    async function loadHallOfFame() {
-        try {
-            const res = await fetch(`api/save_match.php?_=${Date.now()}`);
-            const data = await res.json();
-            if (data.ok && Array.isArray(data.leaderboard)) {
-                renderHallOfFame(data.leaderboard);
-            }
-        } catch (e) {
-            console.warn('Hall of fame offline:', e);
-        }
-    }
-
-    function renderHallOfFame(list) {
-        if (!hofListEl) return;
-        if (!list.length) {
-            hofListEl.innerHTML = '<div style="text-align:center; padding:6px;">NESSUN PUNTEGGIO REGISTRATO. SII IL PRIMO!</div>';
-            return;
-        }
-        hofListEl.innerHTML = list.map((item, idx) => {
-            const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
-            return `
-                <div class="hof-item">
-                    <span>${medal} <strong>${escapeHtml(item.player_name)}</strong></span>
-                    <span>NOI ${item.player_score} - ${item.cpu_score} CPU</span>
-                </div>
-            `;
-        }).join('');
-    }
-
-    btnSaveScore?.addEventListener('click', async () => {
-        if (!lastMatchResult) return;
-        btnSaveScore.disabled = true;
-        btnSaveScore.textContent = 'SALVATAGGIO IN CORSO...';
-
-        const savedPlayer = getSavedPlayer();
-        const playerName = savedPlayer?.full_name || 'SOCIO REPUBLIC';
-
-        try {
-            const res = await fetch('api/save_match.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    player_name: playerName,
-                    opponent_name: 'ALEJANDRO & COELLO8BIT',
-                    player_score: lastMatchResult.playerScore,
-                    cpu_score: lastMatchResult.cpuScore
-                })
-            });
-            const data = await res.json();
-            if (data.ok && Array.isArray(data.leaderboard)) {
-                renderHallOfFame(data.leaderboard);
-            }
-            sound.playButtonA();
-            btnSaveScore.textContent = '✔ SALVATO NELLA HALL OF FAME!';
-            showPokeToast('PUNTEGGIO REGISTRATO NELLA CLASSIFICA DEL CIRCOLO!');
-        } catch (e) {
-            btnSaveScore.textContent = 'ERRORE RETE (RIPROVA)';
-            btnSaveScore.disabled = false;
-        }
-    });
-
-    btnRematch?.addEventListener('click', () => {
-        sound.playButtonA();
-        matchModal.classList.remove('active');
-        gameEngine.startNewMatch();
-    });
-
+  if (viewId === 'view-aperitivo') {
+    sound.startBGM();
+  } else if (viewId === 'view-game') {
+    ensureGameStarted();
     loadHallOfFame();
-});
+  }
+}
+
+function openBrunchView() {
+  sound.btnClick();
+  trackAreaClick('green_brunch');
+  showView('view-brunch');
+}
+
+function openAperitivoView() {
+  sound.btnClick();
+  trackAreaClick('red_aperitivo');
+  showView('view-aperitivo');
+}
+
+function openTorneoView() {
+  sound.btnClick();
+  trackAreaClick('yellow_torneo');
+  showView('view-torneo');
+}
+
+function startPadelAdvergame() {
+  sound.btnClick();
+  sound.startBGM();
+  trackAreaClick('play_game');
+  showView('view-game');
+}
+
+// =========================================================
+// 3. PIXEL-ART INTRO SCENE & ANIMATED DJ SCENE
+// =========================================================
+function initIntroCanvas() {
+  const canvas = document.getElementById('intro-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let frame = 0;
+
+  function drawIntro() {
+    frame++;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Sky & Sun
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(0, 0, 296, 78);
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(246, 10, 26, 26);
+
+    // Lawn
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, 78, 296, 50);
+
+    // Mini Padel Court (Left)
+    ctx.fillStyle = '#0284c7';
+    ctx.fillRect(14, 52, 128, 62);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(14, 52, 128, 62);
+
+    // Net
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(77, 52, 2, 62);
+
+    // Animated Padel Ball
+    const t = (Math.sin(frame * 0.07) + 1) / 2;
+    const bx = 28 + t * 96;
+    const by = 82 - Math.sin(t * Math.PI) * 20;
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(Math.round(bx), Math.round(by), 5, 5);
+
+    // Players
+    const bounce = frame % 24 < 12 ? 0 : 2;
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(24, 76 - bounce, 8, 14);
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(122, 78 + bounce, 8, 14);
+
+    // DJ Console & Brunch Table (Right)
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(166, 74, 114, 34);
+    ctx.strokeStyle = '#090d16';
+    ctx.strokeRect(166, 74, 114, 34);
+
+    // DJ Character
+    ctx.fillStyle = '#a855f7';
+    ctx.fillRect(212, 48 + bounce, 18, 26);
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(215, 38 + bounce, 12, 11);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(213, 39 + bounce, 3, 7);
+    ctx.fillRect(226, 39 + bounce, 3, 7);
+
+    // Turntables & Burger/Spritz icons
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(204, 68, 34, 6);
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(176, 64, 12, 10);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(254, 62, 10, 12);
+
+    // Floating musical notes
+    ctx.fillStyle = '#090d16';
+    ctx.font = '8px "Press Start 2P", monospace';
+    const noteOffset = Math.floor(frame / 15) % 2 === 0 ? 0 : 4;
+    ctx.fillText('♪', 194, 42 - noteOffset);
+    ctx.fillText('♫', 242, 38 + noteOffset);
+
+    requestAnimationFrame(drawIntro);
+  }
+
+  drawIntro();
+}
+
+function initDjSceneCanvas() {
+  const canvas = document.getElementById('dj-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let tick = 0;
+
+  function drawDj() {
+    tick++;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Club Background
+    ctx.fillStyle = '#090a10';
+    ctx.fillRect(0, 0, 280, 136);
+
+    // Laser beams
+    ctx.strokeStyle = tick % 20 < 10 ? 'rgba(244, 63, 94, 0.45)' : 'rgba(56, 189, 248, 0.45)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(140, 6);
+    ctx.lineTo(20 + (tick * 3) % 240, 134);
+    ctx.moveTo(140, 6);
+    ctx.lineTo(260 - (tick * 3) % 240, 134);
+    ctx.stroke();
+
+    // 8-Bit Spectrum Equalizer Bars in Background
+    const barColors = ['#22c55e', '#eab308', '#ef4444', '#38bdf8', '#a855f7'];
+    for (let i = 0; i < 16; i++) {
+      const wave = Math.abs(Math.sin(tick * 0.11 + i * 0.7));
+      const h = Math.round(10 + wave * 42);
+      const bx = 14 + i * 16;
+      const by = 74 - h;
+      ctx.fillStyle = barColors[i % barColors.length];
+      ctx.fillRect(bx, by, 11, h);
+    }
+
+    // Animated Pixel-Art DJ Behind Decks
+    const bob = tick % 16 < 8 ? 0 : 2;
+    const djX = 116;
+    const djY = 34 + bob;
+
+    // Headphones Band
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(djX + 6, djY - 4, 36, 5);
+    ctx.fillRect(djX + 2, djY + 1, 7, 14);
+    ctx.fillRect(djX + 39, djY + 1, 7, 14);
+
+    // DJ Head & Sunglasses
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(djX + 9, djY + 1, 30, 22);
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(djX + 11, djY + 7, 11, 6);
+    ctx.fillRect(djX + 26, djY + 7, 11, 6);
+    ctx.fillRect(djX + 22, djY + 9, 4, 2);
+    // Neon visor glint
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(djX + 13, djY + 8, 4, 2);
+    ctx.fillRect(djX + 28, djY + 8, 4, 2);
+
+    // Torso / Acid Jacket
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(djX + 4, djY + 23, 40, 28);
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(djX + 16, djY + 23, 16, 28);
+
+    // Animated Hand Scratching Vinyl
+    const handShift = tick % 12 < 6 ? -3 : 3;
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(djX - 6 + handShift, djY + 38, 10, 7);
+    ctx.fillRect(djX + 44 - handShift, djY + 38, 10, 7);
+
+    // DJ Booth & Twin Technics Turntables
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(28, 84, 224, 46);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(28, 84, 224, 46);
+
+    // Left & Right Vinyl Platters
+    [76, 204].forEach((cx, idx) => {
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(cx - 24, 76, 48, 9);
+      ctx.fillStyle = (tick + idx * 5) % 10 < 5 ? '#ef4444' : '#facc15';
+      ctx.fillRect(cx - 8, 78, 16, 4);
+    });
+
+    // Mixer Sliders
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(128, 78, 24, 7);
+
+    // Booth Front Neon Sign
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(52, 95, 176, 24);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(52, 95, 176, 24);
+
+    ctx.fillStyle = tick % 24 < 12 ? '#4ade80' : '#facc15';
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.fillText('REPUBLIC ACID DJ', 74, 111);
+
+    // Floating 8-Bit Musical Notes
+    ctx.fillStyle = '#fde047';
+    ctx.fillText('♪', 48, 36 - (tick % 14));
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText('♫', 218, 40 - ((tick + 7) % 14));
+
+    requestAnimationFrame(drawDj);
+  }
+
+  drawDj();
+}
+
+// =========================================================
+// 4. HARDWARE VOLUME KEYS (VolumeUp / VolumeDown) + OSD
+// =========================================================
+function showVolumeOsd(vol, isEasterEgg = false) {
+  const osd = document.getElementById('volume-osd');
+  const titleEl = document.getElementById('vol-osd-title');
+  const barsEl = document.getElementById('vol-osd-bars');
+  if (!osd || !barsEl || !titleEl) return;
+
+  const filled = Math.round(vol * 10);
+  const bars = '█'.repeat(filled) + '░'.repeat(10 - filled);
+  titleEl.textContent = isEasterEgg ? '🔥 TURBO BASS MAX! 🔥' : `VOL CHIPTUNE ${Math.round(vol * 100)}%`;
+  barsEl.textContent = bars;
+
+  osd.classList.add('show');
+  if (volumeOsdTimeout) clearTimeout(volumeOsdTimeout);
+  volumeOsdTimeout = setTimeout(() => {
+    osd.classList.remove('show');
+  }, 1800);
+}
+
+function bindHardwareVolumeKeys() {
+  window.addEventListener('keydown', (e) => {
+    const isVolUp =
+      e.key === 'VolumeUp' ||
+      e.key === 'AudioVolumeUp' ||
+      e.code === 'VolumeUp' ||
+      e.code === 'AudioVolumeUp' ||
+      e.key === '+' ||
+      e.key === '=';
+
+    const isVolDown =
+      e.key === 'VolumeDown' ||
+      e.key === 'AudioVolumeDown' ||
+      e.code === 'VolumeDown' ||
+      e.code === 'AudioVolumeDown' ||
+      e.key === '-';
+
+    if (isVolUp) {
+      const v = sound.adjustVolume(0.1);
+      showVolumeOsd(v, v >= 1.0);
+    } else if (isVolDown) {
+      const v = sound.adjustVolume(-0.1);
+      showVolumeOsd(v, false);
+    }
+  });
+}
+
+// =========================================================
+// 5. SUPER PADEL DX 2V2 & ARCADE SCORE SUBMISSION
+// =========================================================
+function ensureGameStarted() {
+  const canvas = document.getElementById('game-canvas');
+  if (!canvas) return;
+
+  if (!gameEngine) {
+    gameEngine = new PadelGameEngine(canvas, input, {
+      onMatchEnd: handleMatchEnd,
+    });
+    gameEngine.startNewMatch();
+  }
+}
+
+function handleMatchEnd(summary) {
+  lastMatchScore = summary.score || 0;
+  const modal = document.getElementById('match-over-modal');
+  const title = document.getElementById('match-over-title');
+  const scoreLine = document.getElementById('match-over-score');
+  const feedback = document.getElementById('arcade-save-feedback');
+  const saveBtn = document.getElementById('btn-save-score');
+
+  if (title) {
+    title.textContent = summary.won ? '🏆 VITTORIA EPICA!' : 'FINE PARTITA!';
+  }
+  if (scoreLine) {
+    scoreLine.textContent = `PUNTEGGIO: ${lastMatchScore} PTS (SET ${summary.gamesPlayer}-${summary.gamesCpu})`;
+  }
+  if (feedback) {
+    feedback.textContent = '';
+  }
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'SALVA';
+  }
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function bindArcadeScoreForm() {
+  const form = document.getElementById('arcade-score-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inputEl = document.getElementById('arcade-name-input');
+    const feedback = document.getElementById('arcade-save-feedback');
+    const saveBtn = document.getElementById('btn-save-score');
+
+    const rawName = (inputEl ? inputEl.value : 'AAA').trim().toUpperCase() || 'AAA';
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = '...';
+    }
+
+    try {
+      const res = await fetch('api/save_match.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: rawName,
+          score: lastMatchScore,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        sound.pointJingle(true);
+        if (feedback) feedback.textContent = `✔ SALVATO: ${rawName} (${lastMatchScore} PTS)`;
+        if (saveBtn) saveBtn.textContent = 'OK!';
+        await loadHallOfFame();
+      } else {
+        if (feedback) feedback.textContent = 'ERRORE SALVATAGGIO';
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'SALVA';
+        }
+      }
+    } catch (_) {
+      if (feedback) feedback.textContent = 'ERRORE DI RETE';
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'SALVA';
+      }
+    }
+  });
+}
+
+// =========================================================
+// 6. HALL OF FAME (LEADERBOARD) FETCHER
+// =========================================================
+async function loadHallOfFame() {
+  const matchesContainer = document.getElementById('hof-matches-list');
+  if (!matchesContainer) return;
+
+  try {
+    const res = await fetch('api/stats.php?action=public');
+    const data = await res.json();
+    if (!data.ok) return;
+
+    const rows = data.leaderboard || [];
+    if (rows.length === 0) {
+      matchesContainer.innerHTML = '<div class="hof-empty">Nessun punteggio registrato. Gioca ora!</div>';
+    } else {
+      matchesContainer.innerHTML = rows
+        .slice(0, 10)
+        .map((m, idx) => {
+          return `
+            <div class="hof-item">
+              <span>#${idx + 1} <strong>${escapeHtml(m.name)}</strong></span>
+              <span style="color:#fde047;">${Number(m.score)} PTS</span>
+            </div>
+          `;
+        })
+        .join('');
+    }
+  } catch (_) {
+    // Non-blocking
+  }
+}
 
 function escapeHtml(str) {
-    return String(str ?? '').replace(/[&<>"']/g, s => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[s]));
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-/**
- * Draws the 8-bit pixel-art centerpiece from the REBRUNCH poster:
- * Club Sandwich, Avocado Toast with Fried Egg, Berry Pancakes, and Crossed Tennis & Padel Racquets + Balls
- */
-function drawHeroPixelIllustration(canvas) {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width;
-    const H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
+// =========================================================
+// 7. SHELL & UI BUTTON BINDINGS
+// =========================================================
+function bindUiControls() {
+  // Colored Pills & Back Buttons inside LCD
+  document.querySelectorAll('[data-open-view]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetView = btn.getAttribute('data-open-view');
+      const trackArea = btn.getAttribute('data-track-area');
+      sound.btnClick();
+      if (trackArea) trackAreaClick(trackArea);
+      if (targetView) showView(targetView);
+    });
+  });
 
-    const px = (x, y, w, h, color) => {
-        ctx.fillStyle = color;
-        ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
-    };
+  // Intro CTA ("PREMI IL TASTO GIOCA PER INIZIARE!")
+  document.getElementById('intro-play-cta')?.addEventListener('click', () => {
+    startPadelAdvergame();
+  });
 
-    // 1. Club Sandwich (Back Left-Center)
-    px(72, 16, 46, 36, '#10141d'); // Outline
-    px(75, 19, 40, 10, '#e3a857'); // Top toasted bread
-    px(75, 29, 40, 4,  '#d33636'); // Tomato layer
-    px(75, 33, 40, 4,  '#6bc947'); // Lettuce layer
-    px(75, 37, 40, 4,  '#f5b82e'); // Cheese layer
-    px(75, 41, 40, 8,  '#d69542'); // Bottom bread
-    // Toothpick + Red Olive on top
-    px(94, 6,  3, 14, '#e6e6e6');
-    px(91, 4,  9, 7,  '#10141d');
-    px(93, 6,  5, 4,  '#d33636');
+  // WhatsApp 8-Bit Button Submenu Toggle in Torneo View
+  const waBtn = document.getElementById('btn-wa-toggle');
+  const waSubmenu = document.getElementById('wa-submenu');
+  waBtn?.addEventListener('click', () => {
+    sound.btnClick();
+    waSubmenu?.classList.toggle('open');
+  });
 
-    // 2. Avocado Toast with Egg on White Plate (Front Left)
-    px(22, 48, 66, 22, '#10141d');
-    px(25, 51, 60, 16, '#eef5f0'); // White plate
-    px(30, 40, 50, 18, '#10141d');
-    px(33, 43, 44, 12, '#8c5828'); // Crust
-    px(35, 39, 40, 11, '#6bc947'); // Mashed Avocado
-    px(41, 35, 28, 9,  '#ffffff'); // Egg white
-    px(49, 32, 12, 8,  '#f5b82e'); // Sunny Egg Yolk
-    px(51, 33, 3,  2,  '#ffffff'); // Yolk shine
-
-    // 3. Stack of Pancakes with Strawberry & Blueberries (Center)
-    px(98, 38, 46, 32, '#10141d');
-    px(101, 42, 40, 7, '#e09b42'); // Pancake 1
-    px(101, 50, 40, 7, '#d18832'); // Pancake 2
-    px(101, 58, 40, 7, '#e09b42'); // Pancake 3
-    // Maple syrup drips
-    px(108, 42, 6, 18, '#8a4816');
-    px(122, 42, 5, 14, '#8a4816');
-    // Strawberry & blueberries on top
-    px(112, 31, 10, 9, '#d33636');
-    px(123, 34, 6,  6, '#2b59c3');
-    px(129, 36, 5,  5, '#3b73e0');
-
-    // 4. Tennis Racquet (Center-Right)
-    ctx.save();
-    ctx.translate(168, 36);
-    ctx.rotate(-0.35);
-    px(-18, -22, 36, 42, '#10141d');
-    px(-15, -19, 30, 36, '#d98a3c'); // Wooden/ Gold frame
-    px(-11, -15, 22, 28, '#263342'); // String bed bg
-    // Strings mesh
-    for (let sx = -9; sx <= 9; sx += 4) px(sx, -15, 1, 28, '#cfd8e3');
-    for (let sy = -13; sy <= 11; sy += 4) px(-11, sy, 22, 1, '#cfd8e3');
-    px(-3, 20, 6, 18, '#10141d');
-    px(-2, 20, 4, 16, '#c77b30'); // Handle
-    ctx.restore();
-
-    // 5. Padel Racquet (Right - Perforated Carbon Head)
-    ctx.save();
-    ctx.translate(212, 38);
-    ctx.rotate(0.38);
-    px(-18, -22, 36, 40, '#10141d');
-    px(-15, -19, 30, 34, '#4e5d73'); // Outer frame
-    px(-12, -16, 24, 28, '#6c7c94'); // Face
-    // Padel holes grid
-    for (let hx = -8; hx <= 8; hx += 5) {
-        for (let hy = -11; hy <= 6; hy += 5) {
-            px(hx, hy, 2, 2, '#10141d');
-        }
+  // Physical Shell Buttons Routing
+  input.onButtonPress = (btn) => {
+    if (btn === 'GIOCA') {
+      if (currentView !== 'view-game') {
+        startPadelAdvergame();
+      } else {
+        trackAreaClick('play_game');
+      }
+      return;
     }
-    px(-4, 18, 8, 18, '#10141d');
-    px(-2, 18, 4, 16, '#39445b'); // Grip
-    ctx.restore();
 
-    // 6. Neon Yellow Tennis / Padel Balls
-    const drawBall = (bx, by) => {
-        px(bx, by, 14, 14, '#10141d');
-        px(bx + 2, by + 2, 10, 10, '#c7f23a');
-        px(bx + 4, by + 3, 6, 2, '#ffffff');
-    };
-    drawBall(188, 12);
-    drawBall(152, 48);
-    drawBall(163, 56);
-    drawBall(216, 56);
+    // When NOT in an active Padel rally (or when outside view-game),
+    // the 3 colored buttons open their dedicated LCD screens:
+    // GREEN -> Brunch, RED -> Aperitivo, YELLOW -> Torneo
+    const inActiveGame = currentView === 'view-game' && gameEngine && !gameEngine.matchOver;
+    if (!inActiveGame) {
+      if (btn === 'GREEN') openBrunchView();
+      else if (btn === 'RED') openAperitivoView();
+      else if (btn === 'YELLOW') openTorneoView();
+    }
+  };
+
+  // Audio SFX toggle
+  const btnAudio = document.getElementById('btn-audio-toggle');
+  btnAudio?.addEventListener('click', () => {
+    const on = sound.toggleMute();
+    btnAudio.textContent = on ? '♪ SFX:ON' : '♪ SFX:OFF';
+    if (on) sound.btnClick();
+  });
+
+  // CRT Scanlines toggle
+  const btnCrt = document.getElementById('btn-crt-toggle');
+  const lcdScreen = document.getElementById('lcd-screen');
+  btnCrt?.addEventListener('click', () => {
+    sound.btnClick();
+    lcdScreen?.classList.toggle('scanlines');
+    const hasCrt = lcdScreen?.classList.contains('scanlines');
+    btnCrt.textContent = hasCrt ? 'CRT:ON' : 'CRT:OFF';
+  });
+
+  // Match Over Modal actions
+  document.getElementById('btn-play-again')?.addEventListener('click', () => {
+    sound.btnClick();
+    const modal = document.getElementById('match-over-modal');
+    if (modal) modal.style.display = 'none';
+    gameEngine?.startNewMatch();
+  });
+
+  document.getElementById('btn-scroll-rank')?.addEventListener('click', () => {
+    sound.btnClick();
+    const modal = document.getElementById('match-over-modal');
+    if (modal) modal.style.display = 'none';
+    document.getElementById('hall-of-fame')?.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  document.getElementById('btn-refresh-hof')?.addEventListener('click', () => {
+    sound.btnClick();
+    loadHallOfFame();
+  });
 }
+
+// =========================================================
+// BOOTSTRAP
+// =========================================================
+window.addEventListener('DOMContentLoaded', () => {
+  initIntroCanvas();
+  initDjSceneCanvas();
+  bindHardwareVolumeKeys();
+  bindArcadeScoreForm();
+  bindUiControls();
+  loadHallOfFame();
+});

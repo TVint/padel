@@ -1,793 +1,1138 @@
-/* ============================================================================
-   REBRUNCH // REPUBLIC SPORT VILLAGE - 8-BIT GAME BOY COLOR CSS (css/retro.css)
-   Faithful to the official REBRUNCH poster & handheld pixel-art console shell
-   ============================================================================ */
-
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    -webkit-tap-highlight-color: transparent;
-}
+/* css/retro.css - Dandelion Yellow Game Boy Color Shell & Responsive Mobile Advergame UI */
 
 :root {
-    --shell-bg:       #39445b;
-    --shell-dark:     #262e40;
-    --shell-darker:   #191f2c;
-    --shell-light:    #52607d;
-    --border-black:   #10141d;
-    --lcd-bg:         #5b7c68;
-    --lcd-light:      #749982;
-    --lcd-dark:       #354d3e;
-    --lcd-ink:        #111e16;
-    --tt-yellow:      #f5b82e;
-    --tt-lime:        #7fd141;
-    --tt-green:       #6bc947;
-    --tt-red:         #d33636;
-    --tt-cyan:        #59b8d9;
-    --tt-white:       #f4f7f0;
+  /* Dandelion Yellow GBC Shell Palette */
+  --shell-main: #f3be26;
+  --shell-light: #fde047;
+  --shell-dark: #c89008;
+  --shell-border: #1e1b18;
+
+  /* Dark Bezel Lens */
+  --lens-bg: #26262e;
+  --lens-border: #111115;
+
+  /* Poster & Court Palette */
+  --poster-bg: #8fd3e8;
+  --poster-border: #1e293b;
+  --lcd-dark: #0f172a;
+  --lcd-green: #22c55e;
+  --lcd-red: #ef4444;
+  --lcd-yellow: #eab308;
+
+  /* Colored Physical Buttons */
+  --btn-red: #dc2626;
+  --btn-red-dark: #7f1d1d;
+  --btn-green: #16a34a;
+  --btn-green-dark: #14532d;
+  --btn-yellow: #eab308;
+  --btn-yellow-dark: #713f12;
 }
 
-body {
-    background-color: #131722;
-    background-image:
-        radial-gradient(#252d40 1px, transparent 1px),
-        radial-gradient(#1c2333 1px, #131722 1px);
-    background-size: 24px 24px;
-    background-position: 0 0, 12px 12px;
-    color: var(--tt-white);
-    font-family: 'Press Start 2P', monospace;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 16px 10px 40px;
-    overflow-x: hidden;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* ============================================================================
-   OUTER GAME BOY COLOR SHELL
-   ============================================================================ */
+html, body {
+  min-height: 100%;
+  background: radial-gradient(circle at center, #2b2347 0%, #0d0b14 75%, #050508 100%);
+  color: #f8fafc;
+  font-family: 'Press Start 2P', monospace;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 8px;
+  overflow-x: hidden;
+  image-rendering: pixelated;
+}
+
+/* =========================================================
+   MOBILE LANDSCAPE BLOCKER OVERLAY (HIGH Z-INDEX)
+   ========================================================= */
+#landscape-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
+  color: #ffffff;
+  z-index: 999999;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+}
+
+.landscape-box {
+  max-width: 460px;
+  border: 4px solid #ffffff;
+  padding: 24px 18px;
+  background: #000000;
+  box-shadow: 0 0 0 4px #ef4444;
+}
+
+.landscape-icon {
+  font-size: 28px;
+  margin-bottom: 16px;
+}
+
+.landscape-msg {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+@media screen and (orientation: landscape) and (max-height: 620px),
+       screen and (orientation: landscape) and (max-width: 940px) and (pointer: coarse) {
+  #landscape-overlay {
+    display: flex !important;
+  }
+}
+
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 470px;
+}
+
+/* =========================================================
+   DANDELION YELLOW GAME BOY COLOR SHELL
+   ========================================================= */
 .gbc-shell {
-    width: 100%;
-    max-width: 500px;
-    background: var(--shell-bg);
-    border: 5px solid var(--border-black);
-    border-radius: 14px;
-    box-shadow:
-        inset 4px 4px 0 var(--shell-light),
-        inset -4px -4px 0 var(--shell-dark),
-        0 18px 40px rgba(0, 0, 0, 0.75);
-    padding: 20px 18px 18px;
-    position: relative;
-    user-select: none;
+  width: 100%;
+  max-width: 440px;
+  background: linear-gradient(155deg, var(--shell-light) 0%, var(--shell-main) 45%, var(--shell-dark) 100%);
+  border-radius: 24px 24px 58px 24px;
+  padding: 14px 18px 24px;
+  border: 5px solid var(--shell-border);
+  box-shadow:
+    inset 0 4px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -8px 16px rgba(120, 70, 0, 0.45),
+    0 20px 45px rgba(0, 0, 0, 0.8),
+    0 6px 0 #000;
+  position: relative;
+  user-select: none;
 }
 
-/* Corner Screws */
-.screw {
-    width: 14px;
-    height: 14px;
-    background: #6c7891;
-    border: 2px solid var(--border-black);
-    border-radius: 50%;
-    position: absolute;
-    box-shadow: inset 1px 1px 0 #9ba7bf;
-    z-index: 5;
-}
-.screw::after {
-    content: "+";
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
-    color: #1f2533;
-    line-height: 1;
-}
-.screw.tl { top: 8px; left: 8px; }
-.screw.tr { top: 8px; right: 8px; }
-.screw.bl { bottom: 8px; left: 8px; }
-.screw.br { bottom: 8px; right: 8px; }
-
-/* Top embossed label */
-.shell-top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 7px;
-    color: #8493b0;
-    letter-spacing: 0.5px;
-    margin: 0 14px 8px;
-    text-shadow: 1px 1px 0 var(--border-black);
-}
-.audio-toggle-btn {
-    background: var(--shell-dark);
-    color: var(--tt-yellow);
-    border: 2px solid var(--border-black);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    padding: 4px 6px;
-    cursor: pointer;
-    box-shadow: 2px 2px 0 var(--border-black);
-}
-.audio-toggle-btn:active {
-    transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0 var(--border-black);
+.shell-top-groove {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 7px;
+  color: rgba(60, 40, 0, 0.75);
+  padding: 0 8px 8px;
+  border-bottom: 3px groove rgba(255, 255, 255, 0.45);
+  margin-bottom: 10px;
 }
 
-/* ============================================================================
-   RECESSED BEZEL & SAGE-GREEN LCD SCREEN
-   ============================================================================ */
-.lcd-bezel {
-    background: var(--shell-dark);
-    border: 5px solid var(--border-black);
-    border-radius: 10px;
-    padding: 12px;
-    box-shadow:
-        inset 4px 4px 0 #1c2230,
-        inset -4px -4px 0 #323c52;
-    position: relative;
+/* =========================================================
+   DARK SCREEN LENS BEZEL
+   ========================================================= */
+.gbc-lens {
+  background: linear-gradient(180deg, #2e2f38 0%, var(--lens-bg) 100%);
+  border: 4px solid var(--lens-border);
+  border-radius: 14px 14px 34px 14px;
+  padding: 10px 12px 12px;
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.85),
+    0 3px 0 rgba(255, 255, 255, 0.35);
 }
 
+.lens-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.lens-stripes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 22px;
+}
+.stripe-red { height: 2px; background: #ef4444; display: block; }
+.stripe-blue { height: 2px; background: #3b82f6; display: block; }
+
+.lens-title {
+  font-size: 6px;
+  color: #cbd5e1;
+  letter-spacing: 0.4px;
+  flex: 1;
+  text-align: center;
+}
+
+.lens-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.mini-bezel-btn {
+  background: #0f172a;
+  color: #fde047;
+  border: 1px solid #64748b;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  padding: 3px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.mini-bezel-btn:active {
+  transform: translateY(1px);
+}
+
+.lens-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* BATTERY LED */
+.battery-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 24px;
+}
+
+.power-led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #450a0a;
+  box-shadow: 0 0 8px #ef4444, 0 0 14px #f87171;
+  animation: ledPulse 2.4s infinite ease-in-out;
+}
+
+@keyframes ledPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.battery-label {
+  font-size: 5px;
+  color: #94a3b8;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 1px;
+}
+
+/* =========================================================
+   CENTRAL LCD VIEWPORT
+   ========================================================= */
 .lcd-screen {
-    background-color: var(--lcd-bg);
-    background-image:
-        repeating-linear-gradient(
-            0deg,
-            rgba(0, 0, 0, 0.08) 0px,
-            rgba(0, 0, 0, 0.08) 1px,
-            transparent 1px,
-            transparent 3px
-        );
-    border: 5px solid var(--border-black);
-    border-radius: 12px;
-    min-height: 430px;
-    max-height: 470px;
-    position: relative;
-    overflow-y: auto;
-    overflow-x: hidden;
-    box-shadow: inset 0 0 18px rgba(16, 30, 20, 0.45);
-    padding: 12px 10px;
-    color: var(--lcd-ink);
-    scrollbar-width: thin;
-    scrollbar-color: var(--shell-dark) var(--lcd-bg);
+  flex: 1;
+  height: 390px;
+  background: var(--poster-bg);
+  border: 4px solid #090d16;
+  border-radius: 4px;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b #bae6fd;
 }
 
-/* Views inside LCD */
+.lcd-screen::-webkit-scrollbar {
+  width: 5px;
+}
+.lcd-screen::-webkit-scrollbar-track {
+  background: #bae6fd;
+}
+.lcd-screen::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+
+/* Optional CRT Scanlines */
+.lcd-screen.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.11) 3px
+  );
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* Hardware Volume OSD */
+.volume-osd {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  border: 3px solid #facc15;
+  color: #facc15;
+  padding: 6px 10px;
+  font-size: 7px;
+  text-align: center;
+  z-index: 45;
+  box-shadow: 0 4px 0 #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.volume-osd.show {
+  opacity: 1;
+}
+.vol-bars {
+  margin-top: 4px;
+  color: #4ade80;
+  letter-spacing: 1px;
+}
+
 .lcd-view {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    min-height: 400px;
+  display: none;
+  min-height: 100%;
+  flex-direction: column;
 }
+
 .lcd-view.active {
-    display: flex;
+  display: flex;
 }
 
-/* Curtain unlock transition */
-.curtain-overlay {
-    position: absolute;
-    inset: 0;
-    background: var(--border-black);
-    z-index: 40;
-    pointer-events: none;
-    transform: scaleY(0);
-    transform-origin: top;
-    transition: transform 0.38s steps(8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--tt-yellow);
-    font-size: 11px;
-    text-align: center;
-    padding: 20px;
-}
-.curtain-overlay.closing {
-    transform: scaleY(1);
+/* =========================================================
+   VIEW 1: REBRUNCH POSTER INTRO SCREEN
+   ========================================================= */
+.poster-screen {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
+  background: linear-gradient(180deg, #7dd3fc 0%, #bae6fd 55%, #86efac 100%);
+  color: #0f172a;
 }
 
-/* ============================================================================
-   VIEW 1: INTRO / POSTER REBRUNCH SCREEN
-   ============================================================================ */
-.brand-republic {
-    font-size: 22px;
-    color: var(--tt-yellow);
-    text-shadow: 2px 2px 0 var(--border-black);
-    letter-spacing: 1px;
-    text-align: center;
-    margin-top: 2px;
-}
-.brand-sub {
-    font-size: 8px;
-    color: var(--tt-yellow);
-    text-shadow: 1px 1px 0 var(--border-black);
-    margin-bottom: 10px;
-    letter-spacing: 1px;
-}
-.event-date-block {
-    text-align: center;
-    margin-bottom: 8px;
-}
-.event-day {
-    font-size: 19px;
-    color: var(--tt-yellow);
-    text-shadow: 2px 2px 0 var(--border-black);
-    margin-bottom: 4px;
-}
-.event-date-num {
-    font-size: 19px;
-    text-shadow: 2px 2px 0 var(--border-black);
-    margin-bottom: 5px;
-}
-.event-date-num .num { color: var(--tt-yellow); }
-.event-date-num .month { color: var(--tt-lime); }
-.event-hours {
-    font-size: 9px;
-    color: var(--tt-yellow);
-    text-shadow: 1px 1px 0 var(--border-black);
+.poster-header-box {
+  background: #fef9c3;
+  border: 3px solid #0f172a;
+  box-shadow: 3px 3px 0 #0f172a;
+  padding: 7px 6px;
+  text-align: center;
 }
 
-/* Pixel-art illustration container */
-.hero-art-box {
-    position: relative;
-    width: 100%;
-    max-width: 310px;
-    margin: 6px auto 8px;
-    text-align: center;
-}
-.hero-art-canvas {
-    width: 100%;
-    height: auto;
-    image-rendering: pixelated;
-    display: block;
-    margin: 0 auto;
+.poster-title {
+  font-size: 19px;
+  color: #0f172a;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 #facc15;
 }
 
-.rebrunch-banner {
-    background:
-        repeating-linear-gradient(45deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 6px),
-        repeating-linear-gradient(-45deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 6px),
-        #2b384e;
-    border: 4px solid var(--border-black);
-    padding: 8px 10px 6px;
-    text-align: center;
-    width: 96%;
-    box-shadow: 0 4px 0 var(--border-black);
-    margin-top: -4px;
-}
-.rebrunch-word {
-    font-size: 24px;
-    letter-spacing: 1px;
-    text-shadow: 3px 3px 0 var(--border-black);
-}
-.rebrunch-word .r-yel { color: var(--tt-yellow); }
-.rebrunch-word .r-grn { color: var(--tt-lime); }
-
-.eat-play-pill {
-    background: var(--shell-bg);
-    border: 3px solid var(--border-black);
-    padding: 5px 12px;
-    font-size: 9px;
-    margin-top: -3px;
-    margin-bottom: 10px;
-    box-shadow: 0 3px 0 var(--border-black);
-    text-shadow: 1px 1px 0 var(--border-black);
-}
-.eat-play-pill .c-eat { color: #f5932e; }
-.eat-play-pill .c-play { color: var(--tt-yellow); }
-.eat-play-pill .c-rep { color: var(--tt-cyan); }
-
-/* Welcome Pokémon Dialogue Box */
-.welcome-dialog {
-    width: 96%;
-    background: #e6f2ea;
-    border: 3px solid var(--border-black);
-    box-shadow: inset 2px 2px 0 #ffffff, 3px 3px 0 var(--border-black);
-    padding: 8px 10px;
-    font-size: 8px;
-    line-height: 1.6;
-    color: var(--border-black);
-    margin-bottom: 10px;
-    position: relative;
-}
-.welcome-dialog .cursor-arrow {
-    display: inline-block;
-    color: var(--tt-red);
-    animation: blink-anim 0.8s step-end infinite;
+.poster-sub {
+  font-size: 8px;
+  color: #1e293b;
+  margin-top: 3px;
 }
 
-.lcd-cta-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    width: 96%;
-    margin-top: auto;
-}
-.gbc-cta-btn {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 9px;
-    padding: 10px 8px;
-    border: 3px solid var(--border-black);
-    background: var(--tt-yellow);
-    color: var(--border-black);
-    cursor: pointer;
-    box-shadow: inset 2px 2px 0 #ffe07d, 3px 3px 0 var(--border-black);
-    text-align: center;
-    line-height: 1.4;
-}
-.gbc-cta-btn:hover {
-    filter: brightness(1.06);
-}
-.gbc-cta-btn:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0 var(--border-black);
-}
-.gbc-cta-btn.green {
-    background: var(--tt-green);
-    box-shadow: inset 2px 2px 0 #9df07a, 3px 3px 0 var(--border-black);
-}
-.gbc-cta-btn.cyan {
-    background: var(--tt-cyan);
-    box-shadow: inset 2px 2px 0 #93dDF5, 3px 3px 0 var(--border-black);
+.poster-scene {
+  margin: 6px 0;
+  border: 3px solid #0f172a;
+  background: #38bdf8;
+  box-shadow: 3px 3px 0 #0f172a;
+  line-height: 0;
 }
 
-/* ============================================================================
-   VIEW 2: SCHEDA GIOCATORE (REGISTRATION FORM)
-   ============================================================================ */
-.trainer-card {
-    width: 98%;
-    background: #dfeee4;
-    border: 4px solid var(--border-black);
-    box-shadow: inset 2px 2px 0 #ffffff, 4px 4px 0 var(--border-black);
-    padding: 10px;
-    color: var(--border-black);
-}
-.trainer-card-header {
-    background: var(--shell-dark);
-    color: var(--tt-yellow);
-    padding: 7px 8px;
-    font-size: 9px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    border: 2px solid var(--border-black);
-}
-.form-field {
-    margin-bottom: 9px;
-}
-.form-field label {
-    display: block;
-    font-size: 8px;
-    margin-bottom: 4px;
-    color: #16261c;
-    line-height: 1.4;
-}
-.gb-input,
-.gb-select {
-    width: 100%;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 9px;
-    padding: 8px;
-    background: #ffffff;
-    color: var(--border-black);
-    border: 3px solid var(--border-black);
-    outline: none;
-}
-.gb-input:focus,
-.gb-select:focus {
-    background: #fff9d6;
-}
-.gb-radio-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-.gb-radio-pill {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    background: #c8dfd0;
-    border: 2px solid var(--border-black);
-    padding: 6px 8px;
-    font-size: 8px;
-    cursor: pointer;
-}
-.gb-radio-pill:has(input:checked) {
-    background: var(--tt-yellow);
-    font-weight: bold;
-}
-.gb-radio-pill input {
-    accent-color: var(--tt-red);
-    width: 13px;
-    height: 13px;
-}
-.gb-subpanel {
-    background: #c5dece;
-    border: 2px dashed var(--border-black);
-    padding: 8px;
-    margin-bottom: 9px;
-}
-.hint-text {
-    font-size: 7px;
-    color: #2f4f3a;
-    margin-top: 4px;
-    line-height: 1.4;
+#intro-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
 }
 
-/* ============================================================================
-   VIEW 3: SUPER PADEL DX 2v2 GAME SCREEN & HALL OF FAME
-   ============================================================================ */
-.game-hud-bar {
-    width: 100%;
-    background: var(--shell-dark);
-    border: 3px solid var(--border-black);
-    color: var(--tt-white);
-    padding: 5px 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 8px;
-    margin-bottom: 6px;
-}
-.score-pill {
-    color: var(--tt-yellow);
-}
-.canvas-wrapper {
-    position: relative;
-    border: 4px solid var(--border-black);
-    background: #1d5c96;
-    box-shadow: 0 4px 0 var(--border-black);
-    width: 100%;
-    max-width: 328px;
-    aspect-ratio: 320 / 350;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-#padel-canvas {
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
-    display: block;
+.poster-details {
+  background: rgba(254, 249, 195, 0.94);
+  border: 3px solid #0f172a;
+  box-shadow: 3px 3px 0 #0f172a;
+  padding: 8px 6px;
+  text-align: center;
 }
 
-/* Match End Overlay inside Canvas */
-.match-over-modal {
-    position: absolute;
-    inset: 12px;
-    background: rgba(16, 20, 29, 0.95);
-    border: 4px solid var(--tt-yellow);
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    text-align: center;
-    color: var(--tt-white);
-    z-index: 20;
-}
-.match-over-modal.active {
-    display: flex;
+.poster-date {
+  font-size: 12px;
+  color: #b91c1c;
+  margin-bottom: 4px;
+  text-shadow: 1px 1px 0 #fff;
 }
 
-.controls-legend {
-    width: 100%;
-    font-size: 7px;
-    text-align: center;
-    color: var(--lcd-ink);
-    margin-top: 5px;
-    line-height: 1.5;
+.poster-location {
+  font-size: 7px;
+  color: #1e293b;
+  line-height: 1.5;
+  margin-bottom: 7px;
 }
 
-/* Hall of Fame Mini-Board */
-.hof-board {
-    width: 100%;
-    background: #dfeee4;
-    border: 3px solid var(--border-black);
-    padding: 8px;
-    margin-top: 8px;
-    color: var(--border-black);
+.poster-pills {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
 }
-.hof-title {
-    font-size: 8px;
-    background: var(--shell-dark);
-    color: var(--tt-yellow);
-    padding: 5px;
-    text-align: center;
-    margin-bottom: 6px;
+
+.pill {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6.5px;
+  padding: 5px 6px;
+  border: 2px solid #0f172a;
+  box-shadow: 2px 2px 0 #0f172a;
+  cursor: pointer;
 }
+.pill:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #0f172a;
+}
+.pill-green { background: #4ade80; color: #052e16; }
+.pill-red { background: #f87171; color: #450a0a; }
+.pill-yellow { background: #fde047; color: #422006; }
+
+.poster-start-cta {
+  font-size: 7.5px;
+  color: #ffffff;
+  background: #dc2626;
+  padding: 7px 6px;
+  border: 2px solid #0f172a;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #0f172a;
+}
+
+.blink {
+  animation: blinker 1s steps(2, start) infinite;
+}
+@keyframes blinker {
+  to { visibility: hidden; }
+}
+
+/* =========================================================
+   VIEWS 2, 3, 4: BRUNCH (GREEN), APERITIVO (RED), TORNEO (YELLOW)
+   ========================================================= */
+.lcd-card-view {
+  flex: 1;
+  min-height: 100%;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #f8fafc;
+}
+
+.lcd-card-view.theme-green {
+  background: linear-gradient(180deg, #052e16 0%, #14532d 100%);
+}
+.lcd-card-view.theme-red {
+  background: linear-gradient(180deg, #1e0510 0%, #4c0519 60%, #090a10 100%);
+}
+.lcd-card-view.theme-yellow {
+  background: linear-gradient(180deg, #422006 0%, #713f12 100%);
+}
+
+.card-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #090d16;
+  border: 2px solid #facc15;
+  padding: 6px 8px;
+  font-size: 8px;
+  color: #fde047;
+  margin-bottom: 8px;
+}
+
+.lcd-back-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6.5px;
+  padding: 4px 6px;
+  background: #ef4444;
+  color: #fff;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+/* GREEN VIEW: BRUNCH ORDERED LIST */
+.brunch-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.brunch-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(9, 13, 22, 0.85);
+  border: 2px solid #4ade80;
+  padding: 4px 8px;
+  font-size: 7.5px;
+  color: #f0fdf4;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.brunch-list .px-icon {
+  font-size: 11px;
+  width: 18px;
+  text-align: center;
+  filter: contrast(1.25);
+}
+
+.card-view-footer {
+  margin-top: 5px;
+  font-size: 6px;
+  text-align: center;
+  color: #bbf7d0;
+  padding: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px dashed #4ade80;
+}
+
+/* RED VIEW: APERITIVO DJ SET + Y2K MARQUEE */
+.dj-set-banner {
+  background: #ef4444;
+  color: #ffffff;
+  border: 2px solid #fde047;
+  padding: 6px;
+  text-align: center;
+  font-size: 8.5px;
+  margin-bottom: 6px;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.dj-stage-wrap {
+  border: 3px solid #f43f5e;
+  background: #090a10;
+  box-shadow: 3px 3px 0 #000;
+  line-height: 0;
+  margin-bottom: 8px;
+}
+
+#dj-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.y2k-marquee-box {
+  background: #000000;
+  border: 2px solid #38bdf8;
+  padding: 6px 4px;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.y2k-marquee {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #fde047;
+  letter-spacing: 1px;
+}
+
+/* YELLOW VIEW: TORNEO WHATSAPP 8-BIT */
+.torneo-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  background: rgba(9, 13, 22, 0.78);
+  border: 3px solid #fde047;
+  padding: 14px 10px;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.torneo-trophy {
+  font-size: 9px;
+  color: #fde047;
+}
+
+.torneo-copy {
+  font-size: 8px;
+  line-height: 1.8;
+  color: #fef9c3;
+}
+.torneo-copy strong {
+  color: #4ade80;
+}
+
+.wa-big-btn {
+  width: 100%;
+  padding: 12px 10px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  background: #22c55e;
+  color: #052e16;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 0 #000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.wa-big-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #000;
+}
+
+.wa-submenu {
+  display: none;
+  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.wa-submenu.open {
+  display: flex;
+}
+
+.wa-contact-link {
+  display: block;
+  width: 100%;
+  padding: 10px 8px;
+  background: #052e16;
+  color: #4ade80;
+  border: 2px solid #22c55e;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7.5px;
+  text-decoration: none;
+  box-shadow: 2px 2px 0 #000;
+  transition: background 0.15s;
+}
+.wa-contact-link:hover,
+.wa-contact-link:active {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+/* =========================================================
+   VIEW 5: SUPER PADEL DX 2V2 + HALL OF FAME
+   ========================================================= */
+#view-game {
+  background: #0f172a;
+}
+
+.lcd-game-hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #090d16;
+  color: #f8fafc;
+  padding: 5px 6px;
+  border-bottom: 2px solid #38bdf8;
+  font-size: 7px;
+}
+
+.hud-team {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.hud-lbl { color: #94a3b8; font-size: 6px; }
+.hud-pts { color: #fde047; font-size: 10px; }
+.hud-gms { color: #38bdf8; font-size: 6px; }
+
+.hud-center {
+  text-align: center;
+}
+.shot-badge {
+  font-size: 6px;
+  color: #4ade80;
+  margin-bottom: 2px;
+}
+.hud-sub {
+  font-size: 5px;
+  color: #cbd5e1;
+}
+
+.canvas-holder {
+  position: relative;
+  width: 100%;
+  background: #0284c7;
+  line-height: 0;
+}
+
+#game-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* Match Over Arcade Form Modal */
+.lcd-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(9, 13, 22, 0.92);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  z-index: 25;
+}
+
+.modal-box {
+  background: #1e293b;
+  border: 3px solid #fde047;
+  padding: 12px 10px;
+  text-align: center;
+  color: #fff;
+  width: 100%;
+  box-shadow: 0 6px 0 #000;
+}
+
+.modal-box h4 {
+  font-size: 10px;
+  color: #fde047;
+  margin-bottom: 6px;
+}
+
+.modal-box p {
+  font-size: 8px;
+  color: #38bdf8;
+  margin-bottom: 10px;
+}
+
+.arcade-score-form {
+  background: #090d16;
+  border: 2px solid #334155;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.arcade-score-form label {
+  display: block;
+  font-size: 6.5px;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+}
+
+.arcade-input-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+#arcade-name-input {
+  width: 110px;
+  padding: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  text-align: center;
+  background: #16192b;
+  color: #fde047;
+  border: 2px solid #38bdf8;
+}
+
+.arcade-save-feedback {
+  font-size: 6.5px;
+  color: #4ade80;
+  margin-top: 6px;
+  min-height: 10px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.lcd-btn-primary,
+.lcd-btn-secondary {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+  border: 2px solid #090d16;
+}
+.lcd-btn-primary {
+  background: #22c55e;
+  color: #052e16;
+}
+.lcd-btn-secondary {
+  background: #38bdf8;
+  color: #082f49;
+}
+
+.game-controls-hint {
+  display: flex;
+  justify-content: space-between;
+  background: #1e293b;
+  color: #fde047;
+  font-size: 5.5px;
+  padding: 5px 6px;
+  border-top: 2px solid #090d16;
+  border-bottom: 2px solid #090d16;
+}
+
+/* HALL OF FAME */
+.hall-of-fame {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 8px 6px 12px;
+}
+
+.hof-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 7.5px;
+  color: #fde047;
+  margin-bottom: 6px;
+}
+
+.hof-refresh {
+  background: #1e293b;
+  color: #38bdf8;
+  border: 1px solid #38bdf8;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 2px 5px;
+  cursor: pointer;
+}
+
 .hof-list {
-    max-height: 140px;
-    overflow-y: auto;
-    font-size: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
 }
+
 .hof-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px 2px;
-    border-bottom: 1px dashed #7a9985;
+  background: #1e293b;
+  border-left: 3px solid #22c55e;
+  padding: 5px 6px;
+  font-size: 6.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* ============================================================================
-   POKÉMON FLOATING TOAST DIALOGUE INSIDE LCD
-   ============================================================================ */
-.poke-toast {
-    position: sticky;
-    bottom: 2px;
-    left: 0;
-    right: 0;
-    width: 98%;
-    margin: 6px auto 0;
-    background: #f4f7f0;
-    border: 3px solid var(--border-black);
-    box-shadow: 0 3px 0 var(--border-black);
-    padding: 7px 9px;
-    font-size: 7.5px;
-    line-height: 1.5;
-    color: var(--border-black);
-    z-index: 35;
-    display: none;
-}
-.poke-toast.visible {
-    display: block;
+.hof-empty {
+  font-size: 6px;
+  color: #64748b;
+  text-align: center;
+  padding: 8px;
 }
 
-/* ============================================================================
-   CENTER DUAL LED INDICATORS (RED & GREEN)
-   ============================================================================ */
-.leds-center-row {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin: 10px 0;
+/* LENS BOTTOM LOGO */
+.lens-bottom-logo {
+  text-align: center;
+  margin-top: 7px;
+  font-size: 10px;
+  letter-spacing: 1px;
 }
-.pixel-led {
-    width: 14px;
-    height: 16px;
-    border: 3px solid var(--border-black);
-    border-radius: 3px;
-    position: relative;
+.gbc-word {
+  color: #e2e8f0;
+  font-style: italic;
+  margin-right: 4px;
 }
-.pixel-led::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 3px;
-    height: 3px;
-    background: #ffffff;
-}
-.pixel-led.red {
-    background: var(--tt-red);
-    box-shadow: 0 0 8px rgba(211, 54, 54, 0.85);
-}
-.pixel-led.green {
-    background: var(--tt-green);
-    box-shadow: 0 0 8px rgba(107, 201, 71, 0.85);
-}
-.pixel-led.pulse {
-    animation: led-flash 0.25s steps(2) infinite;
-}
-@keyframes led-flash {
-    50% { filter: brightness(1.8); transform: scale(1.1); }
+.color-word b { font-weight: bold; }
+.c-r { color: #ef4444; }
+.c-o { color: #f97316; }
+.c-g { color: #22c55e; }
+.c-b { color: #3b82f6; }
+.c-p { color: #a855f7; }
+
+.nintendo-emboss {
+  text-align: center;
+  margin: 8px auto 4px;
+  font-size: 7px;
+  color: rgba(80, 50, 0, 0.72);
+  letter-spacing: 1.5px;
+  border: 2px groove rgba(255, 255, 255, 0.45);
+  display: table;
+  padding: 3px 10px;
+  border-radius: 10px;
 }
 
-/* ============================================================================
-   BOLTED CONTROL PANELS (D-PAD LEFT + 3 ARCADE BUTTONS RIGHT)
-   ============================================================================ */
-.controls-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 14px;
+/* =========================================================
+   PHYSICAL CONTROLS DECK (40% LARGER ERGONOMIC MOBILE THUMBS)
+   ========================================================= */
+.gbc-controls-deck {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px 6px;
+  margin-top: 2px;
 }
-.control-plate {
-    background: var(--shell-bg);
-    border: 4px solid var(--border-black);
-    border-radius: 8px;
-    box-shadow:
-        inset 3px 3px 0 var(--shell-light),
-        inset -3px -3px 0 var(--shell-dark);
-    padding: 14px 10px;
-    position: relative;
-    min-height: 155px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.plate-screw {
-    width: 10px;
-    height: 10px;
-    background: #77849e;
-    border: 2px solid var(--border-black);
-    border-radius: 50%;
-    position: absolute;
-}
-.plate-screw.tl { top: 6px; left: 6px; }
-.plate-screw.tr { top: 6px; right: 6px; }
-.plate-screw.bl { bottom: 6px; left: 6px; }
-.plate-screw.br { bottom: 6px; right: 6px; }
 
-/* LEFT PLATE: YELLOW 4-WAY D-PAD + "live Dj Set" */
-.dpad-cluster {
-    position: relative;
-    width: 136px;
-    height: 126px;
+/* 40% Larger Ergonomic D-Pad (144x144px) */
+.dpad-wrapper {
+  width: 144px;
+  height: 144px;
+  position: relative;
+  flex-shrink: 0;
 }
+
+.dpad-cross {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
 .dpad-btn {
-    position: absolute;
-    width: 36px;
-    height: 32px;
-    background: var(--tt-yellow);
-    border: 3px solid var(--border-black);
-    box-shadow: inset 2px 2px 0 #ffe27a, 0 3px 0 var(--border-black);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    color: var(--border-black);
-    border-radius: 5px;
-    touch-action: none;
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  background: #27272a;
+  color: #a1a1aa;
+  border: 3px solid #09090b;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #09090b;
+  touch-action: manipulation;
 }
+
 .dpad-btn:active,
 .dpad-btn.pressed {
-    transform: translateY(2px);
-    box-shadow: 0 1px 0 var(--border-black);
-    background: #ffd952;
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #09090b;
+  background: #3f3f46;
+  color: #fde047;
 }
-.dpad-up    { top: 0; left: 50px; }
-.dpad-down  { bottom: 0; left: 50px; }
-.dpad-left  { top: 47px; left: 2px; }
-.dpad-right { top: 47px; right: 2px; }
 
-.dpad-center-label {
-    position: absolute;
-    top: 45px;
-    left: 38px;
-    width: 60px;
-    text-align: center;
-    font-size: 9px;
-    line-height: 1.35;
-    pointer-events: none;
-    text-shadow: 2px 2px 0 var(--border-black);
+.dpad-up    { top: 0; left: 48px; border-radius: 8px 8px 0 0; }
+.dpad-down  { bottom: 0; left: 48px; border-radius: 0 0 8px 8px; }
+.dpad-left  { top: 48px; left: 0; border-radius: 8px 0 0 8px; }
+.dpad-right { top: 48px; right: 0; border-radius: 0 8px 8px 0; }
+
+.dpad-center {
+  position: absolute;
+  top: 48px;
+  left: 48px;
+  width: 48px;
+  height: 48px;
+  background: #27272a;
+  z-index: 2;
 }
-.dpad-center-label .live-word { color: var(--tt-lime); display: block; }
-.dpad-center-label .dj-word   { color: var(--tt-yellow); display: block; }
+.dpad-center::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #18181b 20%, #27272a 100%);
+}
 
-/* RIGHT PLATE: 3 ROUND PIXEL BUTTONS + POSTER LABELS */
-.action-list {
+/* 40% Larger 3 Colored Action Buttons Cluster (62px diameter buttons) */
+.color-buttons-cluster {
+  position: relative;
+  width: 176px;
+  height: 148px;
+  flex-shrink: 0;
+}
+
+.color-btn-slot {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Ergonomic thumb arc on right edge */
+.slot-red {
+  top: 0px;
+  right: 4px;
+}
+.slot-green {
+  top: 28px;
+  left: 4px;
+}
+.slot-yellow {
+  bottom: 0px;
+  right: 40px;
+}
+
+.round-btn {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 3px solid #111827;
+  cursor: pointer;
+  box-shadow:
+    inset 0 4px 5px rgba(255, 255, 255, 0.42),
+    0 5px 0 #111827,
+    0 7px 12px rgba(0, 0, 0, 0.45);
+  transition: transform 0.06s;
+  touch-action: manipulation;
+}
+
+.round-btn:active,
+.round-btn.pressed {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.4),
+    0 2px 0 #111827;
+}
+
+.btn-red {
+  background: radial-gradient(circle at 35% 30%, #f87171, var(--btn-red) 65%, var(--btn-red-dark));
+}
+.btn-green {
+  background: radial-gradient(circle at 35% 30%, #4ade80, var(--btn-green) 65%, var(--btn-green-dark));
+}
+.btn-yellow {
+  background: radial-gradient(circle at 35% 30%, #fef08a, var(--btn-yellow) 65%, var(--btn-yellow-dark));
+}
+
+.btn-caption {
+  font-size: 6px;
+  color: #1e1b18;
+  font-weight: bold;
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+/* =========================================================
+   SINGLE LARGE HORIZONTAL RED/GREY "GIOCA" BUTTON
+   ========================================================= */
+.gbc-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding: 0 6px;
+}
+
+.play-button-deck {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding-left: 28px;
+}
+
+.btn-gioca-main {
+  width: 195px;
+  height: 46px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ef4444 0%, #b91c1c 65%, #374151 100%);
+  border: 4px solid #18181b;
+  color: #ffffff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.45),
+    0 5px 0 #09090b,
+    0 8px 14px rgba(0, 0, 0, 0.45);
+  touch-action: manipulation;
+}
+
+.btn-gioca-main:active,
+.btn-gioca-main.pressed {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.5),
+    0 2px 0 #09090b;
+}
+
+.gioca-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fde047;
+  box-shadow: 0 0 6px #fde047;
+}
+
+/* Speaker Slots */
+.speaker-grille {
+  display: flex;
+  gap: 5px;
+  transform: rotate(-25deg);
+  padding-right: 6px;
+}
+.speaker-grille span {
+  width: 4px;
+  height: 28px;
+  background: #27272a;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px #000;
+}
+
+/* Page Footer */
+.page-footer {
+  margin-top: 10px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 6px;
+  color: #94a3b8;
+  padding: 0 6px;
+}
+.admin-link {
+  color: #fde047;
+  text-decoration: none;
+}
+
+/* =========================================================
+   MOBILE PORTRAIT: FULLSCREEN HANDHELD CONSOLE (100% WIDTH & HEIGHT)
+   ========================================================= */
+@media screen and (max-width: 600px) and (orientation: portrait) {
+  html, body {
+    padding: 0;
+    margin: 0;
+    width: 100vw;
+    height: 100dvh;
+    background: var(--shell-main);
+    overflow-x: hidden;
+  }
+
+  .app-wrapper {
+    max-width: 100%;
+    width: 100vw;
+    min-height: 100dvh;
+  }
+
+  .gbc-shell {
+    max-width: 100%;
+    width: 100vw;
+    min-height: 100dvh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    padding: 10px 12px 18px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    padding: 0 8px;
-}
-.action-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.arcade-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 3px solid var(--border-black);
-    cursor: pointer;
-    position: relative;
-    flex-shrink: 0;
-    box-shadow: 0 4px 0 var(--border-black);
-    touch-action: none;
-}
-.arcade-btn::after {
-    content: "";
-    position: absolute;
-    top: 4px;
-    left: 5px;
-    width: 6px;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.75);
-    border-radius: 50%;
-}
-.arcade-btn:active,
-.arcade-btn.pressed {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 var(--border-black);
-}
-.arcade-btn.green  { background: var(--tt-green); }
-.arcade-btn.red    { background: var(--tt-red); }
-.arcade-btn.yellow { background: var(--tt-yellow); }
-
-.action-label-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.action-main-label {
-    font-size: 10px;
-    text-shadow: 2px 2px 0 var(--border-black);
-}
-.action-main-label.green  { color: var(--tt-lime); }
-.action-main-label.red    { color: var(--tt-red); }
-.action-main-label.yellow { color: var(--tt-yellow); }
-
-.action-sub-label {
-    font-size: 6.5px;
-    color: #b4c2db;
-}
-
-/* ============================================================================
-   SHELL FOOTER: TAGLINE, VENTS, ADDRESS & ADMIN LINK
-   ============================================================================ */
-.soci-banner {
-    text-align: center;
-    font-size: 8.5px;
-    color: var(--tt-yellow);
-    text-shadow: 2px 2px 0 var(--border-black);
-    margin-bottom: 12px;
-    line-height: 1.5;
-}
-
-.shell-bottom-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 12px;
-}
-.vents-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-.vent-slot {
-    height: 9px;
-    background: var(--shell-darker);
-    border: 2px solid var(--border-black);
-    border-radius: 3px;
-    box-shadow: inset 1px 1px 0 #0d1017;
-}
-.venue-address {
-    font-size: 7.5px;
-    color: var(--tt-lime);
-    text-shadow: 1px 1px 0 var(--border-black);
-    line-height: 1.65;
-}
-
-.shell-footer-note {
-    display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 0 14px;
-    font-size: 7.5px;
-}
-.prenotazione-tag {
-    color: var(--tt-red);
-    text-shadow: 1px 1px 0 var(--border-black);
-    letter-spacing: 1px;
-}
-.admin-secret-link {
-    color: #7d8ca8;
-    text-decoration: none;
-    font-size: 7px;
-}
-.admin-secret-link:hover {
-    color: var(--tt-yellow);
-}
+  }
 
-@keyframes blink-anim {
-    50% { opacity: 0; }
-}
+  .lcd-screen {
+    height: 365px;
+  }
 
-@media (max-width: 440px) {
-    .gbc-shell { padding: 16px 12px 14px; }
-    .rebrunch-word { font-size: 20px; }
-    .event-day, .event-date-num { font-size: 16px; }
-    .action-main-label { font-size: 8.5px; }
+  .gbc-controls-deck {
+    padding: 10px 2px 6px;
+  }
+
+  .page-footer {
+    display: none;
+  }
 }

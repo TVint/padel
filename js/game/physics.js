@@ -1,183 +1,265 @@
-/**
- * REBRUNCH // Super Padel DX 2v2 - 2.5D Padel Physics & Rules (js/game/physics.js)
- * Implements 3D ball trajectory (x, y, z), landing target prediction [+],
- * and official Padel glass/cage rebound rules.
- */
+// js/game/physics.js - 2.5D Padel Ball Physics (x, y, z), Linear Charge Interpolation & Landing Predictor
+
+import { sound } from './audio.js';
 
 export const COURT = {
-    width: 320,
-    height: 350,
-    left: 28,
-    right: 292,
-    top: 26,
-    bottom: 324,
-    netY: 175,
-    serviceTop: 82,
-    serviceBottom: 268,
-    centerX: 160,
-    gravity: 0.17
+  WIDTH: 320,
+  HEIGHT: 256,
+  LEFT: 36,
+  RIGHT: 284,
+  TOP: 24,
+  BOTTOM: 232,
+  NET_Y: 128,
+  SERVICE_TOP: 68,
+  SERVICE_BOTTOM: 188,
 };
 
-export function createBall() {
+/**
+ * Linearly interpolates shot velocity (vx, vy, vz) based on player charge (0-100).
+ * - Quick tap (low charge 0..25): short ball ("chiquita" or drop shot) that softly clears the net.
+ * - Medium charge (26..75): controlled deep drive / bandeja.
+ * - Max charge (76..100): deep power shot to the back glass or smash X3.
+ */
+export function computeChargedShotVelocity({
+  charge = 0,
+  dirY = -1,
+  aimX = 0,
+  playerY = 195,
+  ballZ = 10,
+  isLob = false,
+}) {
+  const clampedCharge = Math.max(0, Math.min(100, Number(charge) || 0));
+  const t = clampedCharge / 100; // 0.0 -> 1.0 linear interpolation factor
+
+  if (isLob) {
+    // High arcing pallonetto to push opponents back
+    const lobSpeedY = 2.0 + t * 1.1; // 2.0 to 3.1
+    const lobVx = aimX * (1.1 + t * 1.2);
     return {
-        x: COURT.centerX,
-        y: COURT.bottom - 35,
-        z: 14,
-        vx: 0,
-        vy: 0,
-        vz: 0,
-        spin: 0,
-        bounces: 0,
-        lastHitterTeam: 'player', // 'player' (bottom) or 'cpu' (top)
-        isSmash: false,
-        targetX: COURT.centerX,
-        targetY: COURT.top + 60,
-        trail: []
+      vx: lobVx,
+      vy: dirY * lobSpeedY,
+      vz: 4.9 + t * 0.9,
+      spin: 0,
+      shotType: 'PALLONETTO!',
+      isSmash: false,
     };
+  }
+
+  // Linearly interpolate horizontal & vertical speed from charge (0..100)
+  // Low charge (t ~ 0): vy = 1.65 (short chiquita / drop shot barely clearing net)
+  // Full charge (t = 1): vy = 4.65 (deep power shot to the glass / smash)
+  const minVy = 1.65;
+  const maxVy = 4.65;
+  const speedY = minVy + t * (maxVy - minVy);
+
+  const minVxScale = 0.85;
+  const maxVxScale = 2.75;
+  const vx = aimX * (minVxScale + t * (maxVxScale - minVxScale));
+
+  const nearNet = dirY < 0 ? playerY < COURT.NET_Y + 48 : playerY > COURT.NET_Y - 48;
+
+  // High ball near net + high charge => SMASH X3!
+  if (clampedCharge >= 72 && (ballZ > 15 || nearNet)) {
+    return {
+      vx: vx * 1.1,
+      vy: dirY * (speedY * 1.08),
+      vz: -1.35,
+      spin: (Math.random() - 0.5) * 0.45,
+      shotType: '🔥 SMASH X3!',
+      isSmash: true,
+    };
+  }
+
+  // Quick tap (low charge <= 25) => Short ball (Chiquita / Drop Shot)
+  if (clampedCharge <= 25) {
+    return {
+      vx: vx * 0.75,
+      vy: dirY * (1.55 + t * 1.2),
+      vz: 1.95 + t * 0.6,
+      spin: aimX * 0.15,
+      shotType: 'CHIQUITA!',
+      isSmash: false,
+    };
+  }
+
+  // Medium charge (26..70) => Drive / Bandeja
+  if (clampedCharge <= 70) {
+    return {
+      vx,
+      vy: dirY * speedY,
+      vz: 2.35 + (1 - t) * 0.45,
+      spin: aimX * 0.25,
+      shotType: 'BANDEJA!',
+      isSmash: false,
+    };
+  }
+
+  // High charge (71..100) from baseline => Deep glass shot (Vibora / Bajada)
+  return {
+    vx,
+    vy: dirY * speedY,
+    vz: 2.05,
+    spin: aimX * 0.38,
+    shotType: '⚡ VIBORA A VETRO!',
+    isSmash: false,
+  };
 }
 
-/**
- * Predicts where the ball will next touch the court floor (z = 0)
- * so the blinking [+] reticle and AI players can position themselves.
- */
-export function computeLandingPrediction(ball) {
-    let simX = ball.x;
-    let simY = ball.y;
-    let simZ = Math.max(0.1, ball.z);
-    let vx = ball.vx;
-    let vy = ball.vy;
-    let vz = ball.vz;
+export class BallPhysics {
+  constructor() {
+    this.reset(160, 195, -1);
+  }
 
-    for (let step = 0; step < 180; step++) {
-        simX += vx;
-        simY += vy;
-        vz -= COURT.gravity;
-        simZ += vz;
+  reset(x = 160, y = 195, serveDir = -1) {
+    this.x = x;
+    this.y = y;
+    this.z = 12;
+    this.vx = 0;
+    this.vy = 0;
+    this.vz = 0;
+    this.spin = 0;
+    this.gravity = 0.15;
+    this.inPlay = false;
+    this.serveDir = serveDir;
+    this.bouncesOnCurrentSide = 0;
+    this.lastHitterTeam = null; // 'player' or 'cpu'
+    this.isSmash = false;
+    this.outOfCage = false;
+    this.landingTarget = { x: x, y: y };
+    this.trail = [];
+  }
 
-        // Lateral mesh bounce during flight
-        if (simX < COURT.left + 4) {
-            simX = COURT.left + 4;
-            vx = -vx * 0.72;
-        } else if (simX > COURT.right - 4) {
-            simX = COURT.right - 4;
-            vx = -vx * 0.72;
-        }
+  launch(vx, vy, vz, hitterTeam, isSmash = false, spin = 0) {
+    this.vx = vx;
+    this.vy = vy;
+    this.vz = vz;
+    this.spin = spin;
+    this.inPlay = true;
+    this.lastHitterTeam = hitterTeam;
+    this.bouncesOnCurrentSide = 0;
+    this.isSmash = isSmash;
+    this.outOfCage = false;
+    this.computeLandingPrediction();
+  }
 
-        if (simZ <= 0) {
-            break;
-        }
+  update() {
+    if (!this.inPlay) return null;
+
+    if (Math.random() < 0.65) {
+      this.trail.push({ x: this.x, y: this.y, z: this.z });
+      if (this.trail.length > 7) this.trail.shift();
     }
 
-    ball.targetX = Math.max(COURT.left + 8, Math.min(COURT.right - 8, simX));
-    ball.targetY = Math.max(COURT.top + 8, Math.min(COURT.bottom - 8, simY));
-}
+    const prevY = this.y;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.z += this.vz;
+    this.vz -= this.gravity;
 
-/**
- * Advances ball physics by 1 frame and returns any Padel rule event:
- * - null (rally continues)
- * - { type: 'bounce' }
- * - { type: 'glass_valid', wall: 'top'|'bottom'|'side' }
- * - { type: 'point', winner: 'player'|'cpu', reason: string }
- */
-export function stepBallPhysics(ball) {
-    // Save trail for Smash / fast shots
-    ball.trail.push({ x: ball.x, y: ball.y, z: ball.z });
-    if (ball.trail.length > 7) ball.trail.shift();
-
-    const prevY = ball.y;
-    ball.x += ball.vx;
-    ball.y += ball.vy;
-    ball.vz -= COURT.gravity;
-    ball.z += ball.vz;
-
-    // 1. Check Net Collision when crossing netY
-    if ((prevY - COURT.netY) * (ball.y - COURT.netY) <= 0) {
-        if (ball.z < 11) {
-            // Hit the net!
-            ball.vy = -ball.vy * 0.25;
-            ball.vx *= 0.4;
-            ball.vz = 1.2;
-            const winner = ball.lastHitterTeam === 'player' ? 'cpu' : 'player';
-            return { type: 'point', winner, reason: 'RETE!' };
-        }
+    // Reset bounce counter when crossing the net
+    if ((prevY > COURT.NET_Y && this.y <= COURT.NET_Y) || (prevY < COURT.NET_Y && this.y >= COURT.NET_Y)) {
+      if (this.z < 10) {
+        sound.meshBounce();
+        this.vy *= -0.25;
+        this.vx *= 0.4;
+        return { event: 'net_fault', faultTeam: this.lastHitterTeam };
+      }
+      this.bouncesOnCurrentSide = 0;
     }
 
-    // 2. Lateral Metallic Fence / Side Glass (x boundaries)
-    if (ball.x <= COURT.left + 4 || ball.x >= COURT.right - 4) {
-        ball.x = ball.x <= COURT.left + 4 ? COURT.left + 4 : COURT.right - 4;
-        ball.vx = -ball.vx * 0.75;
+    // Ground bounce (z <= 0)
+    if (this.z <= 0) {
+      this.z = 0;
+      this.bouncesOnCurrentSide++;
+      sound.groundBounce();
 
-        // Direct side wall hit before bouncing on opponent's floor = OUT
-        const onOpponentSide =
-            (ball.lastHitterTeam === 'player' && ball.y < COURT.netY) ||
-            (ball.lastHitterTeam === 'cpu' && ball.y > COURT.netY);
+      this.vx += this.spin * 0.55;
 
-        if (onOpponentSide && ball.bounces === 0) {
-            const winner = ball.lastHitterTeam === 'player' ? 'cpu' : 'player';
-            return { type: 'point', winner, reason: 'FALLO GRIGLIA DIRETTA!' };
-        }
-        computeLandingPrediction(ball);
-        return { type: 'glass_valid', wall: 'side' };
+      if (this.isSmash && Math.abs(this.vy) > 3.1) {
+        this.vz = 5.4;
+      } else {
+        this.vz = Math.max(1.85, Math.abs(this.vz) * 0.68);
+      }
+
+      this.vx *= 0.88;
+      this.vy *= 0.86;
+
+      if (this.bouncesOnCurrentSide >= 2) {
+        const ballOnTop = this.y < COURT.NET_Y;
+        const winner = ballOnTop ? 'player' : 'cpu';
+        return { event: 'double_bounce', winner };
+      }
+
+      this.computeLandingPrediction();
     }
 
-    // 3. Back Tempered Glass Walls (top & bottom y boundaries)
-    if (ball.y <= COURT.top + 4 || ball.y >= COURT.bottom - 4) {
-        const hitTopWall = ball.y <= COURT.top + 4;
-        ball.y = hitTopWall ? COURT.top + 4 : COURT.bottom - 4;
+    // Side Walls (Glass near baseline, Metallic Mesh near net)
+    if (this.x <= COURT.LEFT || this.x >= COURT.RIGHT) {
+      if (this.z > 32 && this.isSmash) {
+        this.outOfCage = true;
+        const winner = this.lastHitterTeam;
+        return { event: 'smash_x3', winner };
+      }
 
-        // If ball hasn't bounced on the floor yet -> Direct Glass Fault (OUT!)
-        if (ball.bounces === 0) {
-            const winner = ball.lastHitterTeam === 'player' ? 'cpu' : 'player';
-            return { type: 'point', winner, reason: 'OUT! VETRO DIRETTO' };
-        }
+      if (this.bouncesOnCurrentSide === 0) {
+        const winner = this.lastHitterTeam === 'player' ? 'cpu' : 'player';
+        return { event: 'wall_fault', winner };
+      }
 
-        // Smash X3 over the back glass wall!
-        if (ball.isSmash && ball.z > 28) {
-            const winner = ball.lastHitterTeam;
-            return { type: 'point', winner, reason: 'SMASH X3 FUORI GABBIA!' };
-        }
+      this.x = this.x <= COURT.LEFT ? COURT.LEFT + 1 : COURT.RIGHT - 1;
+      const nearNetZone = Math.abs(this.y - COURT.NET_Y) < 42;
 
-        // Valid Padel Rebound off back glass!
-        ball.vy = -ball.vy * 0.68;
-        ball.vz = Math.max(ball.vz, 1.6);
-        computeLandingPrediction(ball);
-        return { type: 'glass_valid', wall: hitTopWall ? 'top' : 'bottom' };
+      if (nearNetZone) {
+        sound.meshBounce();
+        this.vx = -this.vx * (0.55 + Math.random() * 0.35);
+        this.vy += (Math.random() - 0.5) * 1.4;
+      } else {
+        sound.glassBounce();
+        this.vx = -this.vx * 0.78;
+      }
+      this.computeLandingPrediction();
     }
 
-    // 4. Floor Bounce (z <= 0)
-    if (ball.z <= 0) {
-        ball.z = 0;
-        ball.bounces += 1;
+    // Back Glass Walls (Top and Bottom)
+    if (this.y <= COURT.TOP || this.y >= COURT.BOTTOM) {
+      if (this.bouncesOnCurrentSide === 0) {
+        const winner = this.lastHitterTeam === 'player' ? 'cpu' : 'player';
+        return { event: 'out_fault', winner };
+      }
 
-        // Check if first bounce was on hitter's own side of the court
-        if (ball.bounces === 1) {
-            const bouncedOwnSide =
-                (ball.lastHitterTeam === 'player' && ball.y > COURT.netY) ||
-                (ball.lastHitterTeam === 'cpu' && ball.y < COURT.netY);
-
-            if (bouncedOwnSide) {
-                const winner = ball.lastHitterTeam === 'player' ? 'cpu' : 'player';
-                return { type: 'point', winner, reason: 'RIMBALZO NEL PROPRIO CAMPO!' };
-            }
-        }
-
-        // Double bounce -> Point scored!
-        if (ball.bounces >= 2) {
-            const winner = ball.lastHitterTeam;
-            return {
-                type: 'point',
-                winner,
-                reason: ball.isSmash ? 'PUNTO SMASH!' : 'DOPPIO RIMBALZO!'
-            };
-        }
-
-        // First valid floor bounce
-        ball.vz = Math.max(2.6, Math.abs(ball.vz) * 0.72);
-        ball.vx *= 0.88;
-        ball.vy *= 0.88;
-        computeLandingPrediction(ball);
-        return { type: 'bounce' };
+      sound.glassBounce();
+      this.y = this.y <= COURT.TOP ? COURT.TOP + 1 : COURT.BOTTOM - 1;
+      this.vy = -this.vy * 0.72;
+      this.vz = Math.max(this.vz, 1.8);
+      this.computeLandingPrediction();
     }
 
     return null;
+  }
+
+  computeLandingPrediction() {
+    let simX = this.x;
+    let simY = this.y;
+    let simZ = Math.max(0.1, this.z);
+    let simVx = this.vx;
+    let simVy = this.vy;
+    let simVz = this.vz;
+
+    for (let i = 0; i < 120; i++) {
+      simX += simVx;
+      simY += simVy;
+      simZ += simVz;
+      simVz -= this.gravity;
+
+      if (simX <= COURT.LEFT || simX >= COURT.RIGHT) simVx *= -0.75;
+      if (simY <= COURT.TOP || simY >= COURT.BOTTOM) simVy *= -0.7;
+
+      if (simZ <= 0) {
+        break;
+      }
+    }
+
+    this.landingTarget.x = Math.max(COURT.LEFT + 8, Math.min(COURT.RIGHT - 8, simX));
+    this.landingTarget.y = Math.max(COURT.TOP + 8, Math.min(COURT.BOTTOM - 8, simY));
+  }
 }

@@ -1,400 +1,411 @@
-/**
- * REBRUNCH // Super Padel DX 2v2 - Core Game Engine (js/game/engine.js)
- * 60fps Pixel-Art Game Loop, Serve/Rally State Machine, Smash X3 Screen-Shake,
- * and Hall of Fame Match Completion Callback.
- */
+// js/game/engine.js - Super Padel DX 2v2 Game Engine, Calibrated Charge Shots & Arcade Score
 
-import { COURT, createBall, computeLandingPrediction, stepBallPhysics } from './physics.js';
-import { createPlayers, drawPadelCourt, drawLandingReticle, drawPlayerSprite, drawBall25D } from './entities.js';
-import { updateAIPartner, updateCPUOpponents } from './ai.js';
+import { COURT, BallPhysics, computeChargedShotVelocity } from './physics.js';
+import { PadelPlayer, PALETTES } from './entities.js';
+import { PadelTeamAI } from './ai.js';
 import { sound } from './audio.js';
 
+const TENNIS_POINTS = ['0', '15', '30', '40', 'AD'];
+
 export class PadelGameEngine {
-    constructor(canvas, input, callbacks = {}) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.input = input;
-        this.callbacks = callbacks;
+  constructor(canvas, input, callbacks = {}) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.input = input;
+    this.callbacks = callbacks;
 
-        this.players = createPlayers('TU', 'SOCIO IA');
-        this.ball = createBall();
-        this.callouts = [];
-        this.particles = [];
+    this.ball = new BallPhysics();
+    this.ai = new PadelTeamAI();
 
-        this.playerScore = 0;
-        this.cpuScore = 0;
-        this.targetWinScore = 4; // First to 4 points wins the match
+    this.human = new PadelPlayer({
+      id: 'p1',
+      name: 'TU',
+      team: 'player',
+      side: 'left',
+      x: 112,
+      y: 198,
+      isHuman: true,
+      palette: PALETTES.human,
+    });
 
-        this.state = 'SERVE'; // 'SERVE' | 'RALLY' | 'POINT_PAUSE' | 'MATCH_OVER'
-        this.serverTeam = 'player';
-        this.pauseTimer = 0;
-        this.frameTick = 0;
-        this.shakeFrames = 0;
-        this.running = false;
-        this.rafId = null;
+    this.partner = new PadelPlayer({
+      id: 'p2',
+      name: 'SOCIO',
+      team: 'player',
+      side: 'right',
+      x: 208,
+      y: 198,
+      isHuman: false,
+      palette: PALETTES.partner,
+    });
+
+    this.cpuLeft = new PadelPlayer({
+      id: 'c1',
+      name: 'PRO-1',
+      team: 'cpu',
+      side: 'left',
+      x: 112,
+      y: 56,
+      isHuman: false,
+      palette: PALETTES.cpuLeft,
+    });
+
+    this.cpuRight = new PadelPlayer({
+      id: 'c2',
+      name: 'PRO-2',
+      team: 'cpu',
+      side: 'right',
+      x: 208,
+      y: 56,
+      isHuman: false,
+      palette: PALETTES.cpuRight,
+    });
+
+    this.players = [this.human, this.partner, this.cpuLeft, this.cpuRight];
+
+    // Match State & Arcade Score
+    this.ptsPlayer = 0;
+    this.ptsCpu = 0;
+    this.gamesPlayer = 0;
+    this.gamesCpu = 0;
+    this.targetGames = 2; // Best of 2 games mini-set
+    this.arcadeScore = 0; // Points sent to leaderboard at match end
+    this.rallyHits = 0;
+    this.waitingForServe = true;
+    this.serveTimer = 0;
+    this.bannerText = 'PREMI VERDE/ROSSO PER SERVIRE!';
+    this.bannerTimer = 90;
+    this.matchOver = false;
+    this.running = false;
+  }
+
+  startNewMatch() {
+    this.ptsPlayer = 0;
+    this.ptsCpu = 0;
+    this.gamesPlayer = 0;
+    this.gamesCpu = 0;
+    this.arcadeScore = 0;
+    this.rallyHits = 0;
+    this.matchOver = false;
+    this.resetRally('TOCCA A TE SERVIRE!');
+    this._syncHud('READY!');
+    if (!this.running) {
+      this.running = true;
+      requestAnimationFrame(() => this.loop());
     }
+  }
 
-    configurePlayerNames(playerName, partnerName) {
-        this.players = createPlayers(playerName || 'TU', partnerName || 'SOCIO IA');
-    }
+  resetRally(message = 'PRONTI!') {
+    this.players.forEach((p) => p.resetPosition());
+    this.ball.reset(this.human.x + 6, this.human.y - 8, -1);
+    this.waitingForServe = true;
+    this.rallyHits = 0;
+    this.bannerText = message;
+    this.bannerTimer = 75;
+  }
 
-    startNewMatch() {
-        this.playerScore = 0;
-        this.cpuScore = 0;
-        this.serverTeam = 'player';
-        this.callouts = [];
-        this.particles = [];
-        this.setupServe('player');
-        this._notifyScore();
+  loop() {
+    if (!this.running) return;
+    this.update();
+    this.render();
+    requestAnimationFrame(() => this.loop());
+  }
 
-        if (!this.running) {
-            this.running = true;
-            this.input.isGameActive = true;
-            this._loop();
-        }
-    }
+  update() {
+    if (this.matchOver) return;
+    if (this.bannerTimer > 0) this.bannerTimer--;
 
-    stop() {
-        this.running = false;
-        this.input.isGameActive = false;
-        if (this.rafId) {
-            cancelAnimationFrame(this.rafId);
-            this.rafId = null;
-        }
-    }
+    const action = this.human.updateHuman(this.input, this.ball);
 
-    setupServe(serverTeam = 'player') {
-        this.state = 'SERVE';
-        this.serverTeam = serverTeam;
+    // Serve trigger (press or release A/B or GIOCA while waiting for serve)
+    if (this.waitingForServe) {
+      this.ball.x = this.human.x + 6;
+      this.ball.y = this.human.y - 6;
+      this.ball.z = 11;
 
-        // Reset player positions
-        const [human, partner, cpu1, cpu2] = this.players;
-        human.x = COURT.centerX - 46;
-        human.y = COURT.bottom - 34;
-        human.charge = 0;
-        human.dashTimer = 0;
-
-        partner.x = COURT.centerX + 46;
-        partner.y = COURT.netY + 46;
-
-        cpu1.x = COURT.centerX - 46;
-        cpu1.y = COURT.top + 38;
-
-        cpu2.x = COURT.centerX + 46;
-        cpu2.y = COURT.netY - 46;
-
-        this.ball = createBall();
-        if (serverTeam === 'player') {
-            this.ball.x = human.x + 10;
-            this.ball.y = human.y - 6;
-            this.ball.z = 12;
-        } else {
-            this.ball.x = cpu1.x + 8;
-            this.ball.y = cpu1.y + 8;
-            this.ball.z = 12;
-            this.pauseTimer = 45; // CPU auto-serves after 45 frames
-        }
-    }
-
-    addCallout(text, x, y, color = '#f5b82e') {
-        this.callouts.push({ text, x, y, color, life: 42 });
-    }
-
-    spawnParticles(x, y, color = '#f5b82e', count = 10) {
-        for (let i = 0; i < count; i++) {
-            const angle = (Math.PI * 2 * i) / count;
-            const spd = 1 + Math.random() * 2.2;
-            this.particles.push({
-                x,
-                y,
-                vx: Math.cos(angle) * spd,
-                vy: Math.sin(angle) * spd,
-                color,
-                life: 18 + Math.random() * 10
-            });
-        }
-    }
-
-    _notifyScore() {
-        if (typeof this.callbacks.onScoreUpdate === 'function') {
-            this.callbacks.onScoreUpdate(this.playerScore, this.cpuScore);
-        }
-    }
-
-    _updateHuman(human) {
-        const keys = this.input.keys;
-
-        // Dash / Dive (Yellow Button / X)
-        if (keys.dash && human.dashCooldown <= 0 && human.dashTimer <= 0) {
-            human.dashTimer = 11;
-            human.dashCooldown = 36;
-            sound.playBlip(480, 0.05, 'triangle', 0.12);
-            this.addCallout('SCATTO!', human.x, human.y - 18, '#f5b82e');
-        }
-
-        if (human.dashTimer > 0) human.dashTimer--;
-        if (human.dashCooldown > 0) human.dashCooldown--;
-        if (human.swingTimer > 0) human.swingTimer--;
-
-        const spd = human.dashTimer > 0 ? human.speed * 1.95 : human.speed;
-        let dx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-        let dy = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
-
-        if (dx !== 0 && dy !== 0) {
-            dx *= 0.7071;
-            dy *= 0.7071;
-        }
-
-        human.vx = dx * spd;
-        human.vy = dy * spd;
-        human.x = Math.max(COURT.left + 10, Math.min(COURT.right - 10, human.x + human.vx));
-        human.y = Math.max(COURT.netY + 16, Math.min(COURT.bottom - 10, human.y + human.vy));
-
-        // Serve Trigger
-        if (this.state === 'SERVE' && this.serverTeam === 'player') {
-            this.ball.x = human.x + 10;
-            this.ball.y = human.y - 6;
-            if (keys.hit || keys.lob) {
-                this.state = 'RALLY';
-                this.ball.vx = 1.35 + (keys.right ? 0.5 : keys.left ? -0.5 : 0);
-                this.ball.vy = -3.6;
-                this.ball.vz = keys.lob ? 4.4 : 2.9;
-                this.ball.bounces = 0;
-                this.ball.lastHitterTeam = 'player';
-                computeLandingPrediction(this.ball);
-                human.swingTimer = 14;
-                sound.playHit(1.1);
-                this.addCallout('SERVIZIO!', human.x, human.y - 18, '#f5b82e');
-                keys.hit = false;
-                keys.lob = false;
-            }
-            return;
-        }
-
-        if (this.state !== 'RALLY') return;
-
-        // Charge shot while holding Red Button / Space
-        if (keys.hit) {
-            human.charge = Math.min(1, human.charge + 0.045);
-        } else if (human.charge > 0) {
-            human.charge = Math.max(0, human.charge - 0.08);
-        }
-
-        // Check if ball is within human strike zone
-        const dist = Math.hypot(human.x - this.ball.x, human.y - this.ball.y);
-        const canHit = dist < 25 && this.ball.z < 30 && this.ball.y > COURT.netY - 4;
-
-        if (canHit && human.swingTimer === 0 && (keys.hit || keys.lob || human.charge > 0.25)) {
-            human.swingTimer = 15;
-            const aimDir = (keys.right ? 1.4 : keys.left ? -1.4 : ((COURT.centerX - human.x) / 60));
-
-            // Check for SMASH X3 condition (near net + high ball + Red Hit button)
-            const isSmashOpportunity = !keys.lob && human.y < COURT.netY + 92 && this.ball.z > 15;
-
-            if (keys.lob) {
-                // Pallonetto / Lob (Green Button / Z)
-                this.ball.vx = aimDir;
-                this.ball.vy = -2.55;
-                this.ball.vz = 5.25;
-                this.ball.isSmash = false;
-                sound.playLob();
-                this.addCallout('LOB!', human.x, human.y - 20, '#6bc947');
-            } else if (isSmashOpportunity) {
-                // SMASH X3!
-                this.ball.vx = aimDir * 1.45;
-                this.ball.vy = -4.95;
-                this.ball.vz = 3.85;
-                this.ball.isSmash = true;
-                this.shakeFrames = 14;
-                sound.playSmash();
-                this.spawnParticles(this.ball.x, this.ball.y, '#d33636', 14);
-                this.addCallout('🔥 SMASH X3!', human.x, human.y - 22, '#d33636');
-                if (typeof this.callbacks.onSmash === 'function') {
-                    this.callbacks.onSmash();
-                }
-            } else {
-                // Standard / Charged Drive
-                const powerBoost = 1 + human.charge * 0.35;
-                this.ball.vx = aimDir * 1.25;
-                this.ball.vy = -3.65 * powerBoost;
-                this.ball.vz = 2.85;
-                this.ball.isSmash = false;
-                sound.playHit(powerBoost);
-                if (human.charge > 0.65) {
-                    this.addCallout('VIBORA!', human.x, human.y - 18, '#f5b82e');
-                }
-            }
-
-            human.charge = 0;
-            this.ball.bounces = 0;
-            this.ball.lastHitterTeam = 'player';
-            computeLandingPrediction(this.ball);
-            keys.hit = false;
-            keys.lob = false;
-        }
-    }
-
-    _awardPoint(winnerTeam, reason) {
-        this.state = 'POINT_PAUSE';
-        this.pauseTimer = 75;
-        this.shakeFrames = 8;
-
-        if (winnerTeam === 'player') {
-            this.playerScore++;
-            sound.playPoint(true);
-            this.addCallout(`PUNTO NOI! (${reason})`, COURT.centerX, COURT.netY - 12, '#6bc947');
-        } else {
-            this.cpuScore++;
-            sound.playPoint(false);
-            this.addCallout(`PUNTO CPU! (${reason})`, COURT.centerX, COURT.netY - 12, '#d33636');
-        }
-
-        this.spawnParticles(this.ball.x, this.ball.y, winnerTeam === 'player' ? '#6bc947' : '#d33636', 12);
-        this._notifyScore();
-    }
-
-    _update() {
-        this.frameTick++;
-        const [human, partner, cpu1, cpu2] = this.players;
-
-        // Tick down swing timers on AI players
-        [partner, cpu1, cpu2].forEach(p => {
-            if (p.swingTimer > 0) p.swingTimer--;
+      if (action || this.input.keys.start) {
+        this.input.keys.start = false;
+        this.waitingForServe = false;
+        const serveCharge = action && typeof action.charge === 'number' ? action.charge : 45;
+        const aimX = (this.input.keys.left ? -0.9 : 0) + (this.input.keys.right ? 0.9 : 0);
+        const shot = computeChargedShotVelocity({
+          charge: serveCharge,
+          dirY: -1,
+          aimX: aimX || 0.35,
+          playerY: this.human.y,
+          ballZ: this.ball.z,
+          isLob: action?.type === 'lob',
         });
-
-        this._updateHuman(human);
-
-        // CPU Auto-Serve
-        if (this.state === 'SERVE' && this.serverTeam === 'cpu') {
-            this.pauseTimer--;
-            if (this.pauseTimer <= 0) {
-                this.state = 'RALLY';
-                this.ball.vx = 1.2;
-                this.ball.vy = 3.45;
-                this.ball.vz = 2.9;
-                this.ball.bounces = 0;
-                this.ball.lastHitterTeam = 'cpu';
-                computeLandingPrediction(this.ball);
-                cpu1.swingTimer = 14;
-                sound.playHit(1.0);
-                this.addCallout('SERVIZIO CPU!', cpu1.x, cpu1.y + 14, '#f5b82e');
-            }
-        }
-
-        if (this.state === 'RALLY') {
-            updateAIPartner(partner, human, this.ball, true, (t, x, y, c) => this.addCallout(t, x, y, c));
-            updateCPUOpponents(cpu1, cpu2, this.ball, true, (t, x, y, c) => this.addCallout(t, x, y, c));
-
-            const evt = stepBallPhysics(this.ball);
-            if (evt) {
-                if (evt.type === 'bounce') {
-                    sound.playBounce();
-                } else if (evt.type === 'glass_valid') {
-                    sound.playGlassWall();
-                    this.spawnParticles(this.ball.x, this.ball.y, '#59b8d9', 7);
-                    this.addCallout('SPONDA VETRO!', this.ball.x, this.ball.y, '#59b8d9');
-                } else if (evt.type === 'point') {
-                    this._awardPoint(evt.winner, evt.reason);
-                }
-            }
-        } else if (this.state === 'POINT_PAUSE') {
-            this.pauseTimer--;
-            if (this.pauseTimer <= 0) {
-                if (this.playerScore >= this.targetWinScore || this.cpuScore >= this.targetWinScore) {
-                    this.state = 'MATCH_OVER';
-                    const won = this.playerScore > this.cpuScore;
-                    if (won) sound.playLevelUpJingle();
-                    if (typeof this.callbacks.onMatchEnd === 'function') {
-                        this.callbacks.onMatchEnd({
-                            playerScore: this.playerScore,
-                            cpuScore: this.cpuScore,
-                            won
-                        });
-                    }
-                } else {
-                    const nextServer = (this.playerScore + this.cpuScore) % 2 === 0 ? 'player' : 'cpu';
-                    this.setupServe(nextServer);
-                }
-            }
-        }
-
-        // Update particles & floating callouts
-        this.particles.forEach(pt => {
-            pt.x += pt.vx;
-            pt.y += pt.vy;
-            pt.life--;
-        });
-        this.particles = this.particles.filter(pt => pt.life > 0);
-
-        this.callouts.forEach(c => {
-            c.y -= 0.35;
-            c.life--;
-        });
-        this.callouts = this.callouts.filter(c => c.life > 0);
+        sound.paddleHit(1 + serveCharge / 100);
+        this.ball.launch(shot.vx, shot.vy, shot.vz, 'player', false, shot.spin);
+        this._syncHud('SERVIZIO!');
+      }
+      return;
     }
 
-    _draw() {
-        const ctx = this.ctx;
-        ctx.save();
+    // Human strikes the ball in play
+    if (this.ball.inPlay && this.ball.lastHitterTeam !== 'player') {
+      const canReach = this.human.canReachBall(this.ball);
+      if (canReach && (action || this.input.keys.actionA || this.ball.z < 15)) {
+        const isLob = action?.type === 'lob';
+        const charge = action && typeof action.charge === 'number'
+          ? action.charge
+          : (this.human.isCharging ? this.human.charge : 18);
 
-        // Screen-shake effect on Smash X3 / Point
-        if (this.shakeFrames > 0) {
-            this.shakeFrames--;
-            const sx = (Math.random() - 0.5) * 6;
-            const sy = (Math.random() - 0.5) * 6;
-            ctx.translate(sx, sy);
-        }
-
-        drawPadelCourt(ctx, this.frameTick);
-
-        if (this.state === 'RALLY') {
-            drawLandingReticle(ctx, this.ball, this.frameTick);
-        }
-
-        // Sort players by Y so foreground overlaps background naturally
-        const sortedPlayers = [...this.players].sort((a, b) => a.y - b.y);
-        sortedPlayers.forEach(p => drawPlayerSprite(ctx, p, this.frameTick));
-
-        drawBall25D(ctx, this.ball);
-
-        // Draw particles
-        this.particles.forEach(pt => {
-            ctx.fillStyle = pt.color;
-            ctx.fillRect(Math.round(pt.x), Math.round(pt.y), 3, 3);
-        });
-
-        // Draw floating pixel callouts
-        ctx.font = '8px "Press Start 2P", monospace';
-        ctx.textAlign = 'center';
-        this.callouts.forEach(c => {
-            const cx = Math.max(55, Math.min(COURT.width - 55, Math.round(c.x)));
-            const cy = Math.max(24, Math.min(COURT.height - 16, Math.round(c.y)));
-            ctx.fillStyle = '#10141d';
-            ctx.fillText(c.text, cx + 1, cy + 1);
-            ctx.fillStyle = c.color;
-            ctx.fillText(c.text, cx, cy);
-        });
-
-        // Serve prompt banner
-        if (this.state === 'SERVE' && this.serverTeam === 'player') {
-            if ((this.frameTick % 36) < 26) {
-                ctx.fillStyle = 'rgba(16, 20, 29, 0.85)';
-                ctx.fillRect(28, COURT.netY + 14, COURT.width - 56, 22);
-                ctx.strokeStyle = '#f5b82e';
-                ctx.strokeRect(28, COURT.netY + 14, COURT.width - 56, 22);
-                ctx.fillStyle = '#f5b82e';
-                ctx.font = '7px "Press Start 2P", monospace';
-                ctx.fillText('PREMI [ROSSO / SPACE] PER SERVIRE!', COURT.centerX, COURT.netY + 28);
-            }
-        }
-
-        ctx.restore();
+        this.human.isCharging = false;
+        this.human.charge = 0;
+        this.human.swingTimer = 14;
+        this._executeHumanShot(charge, isLob);
+      }
     }
 
-    _loop() {
-        if (!this.running) return;
-        this._update();
-        this._draw();
-        this.rafId = requestAnimationFrame(() => this._loop());
+    // Update Partner & Opponents AI
+    this.ai.updatePartner(this.partner, this.human, this.ball);
+    this.ai.updateOpponents(this.cpuLeft, this.cpuRight, this.ball);
+
+    // Update 2.5D Ball Physics
+    const result = this.ball.update();
+    if (result) {
+      this._handlePointOutcome(result);
     }
+  }
+
+  _executeHumanShot(charge, isLob = false) {
+    let aimX = 0;
+    if (this.input.keys.left) aimX = -1.0;
+    else if (this.input.keys.right) aimX = 1.0;
+    else aimX = (Math.random() - 0.5) * 0.65;
+
+    // Linearly map charge (0-100) to shot velocity (vx, vy, vz)
+    const shot = computeChargedShotVelocity({
+      charge,
+      dirY: -1,
+      aimX,
+      playerY: this.human.y,
+      ballZ: this.ball.z,
+      isLob,
+    });
+
+    if (shot.isSmash) {
+      sound.smashHit();
+      this.arcadeScore += 60;
+    } else {
+      sound.paddleHit(0.8 + (charge / 100) * 0.9);
+      this.arcadeScore += 25;
+    }
+
+    this.rallyHits++;
+    this.human.say(shot.shotType.replace('🔥 ', '').replace('⚡ ', ''), 32);
+    this.ball.launch(shot.vx, shot.vy, shot.vz, 'player', shot.isSmash, shot.spin);
+    this._syncHud(shot.shotType);
+  }
+
+  _handlePointOutcome(result) {
+    this.ball.inPlay = false;
+
+    let winner = result.winner;
+    if (result.event === 'net_fault') {
+      winner = result.faultTeam === 'player' ? 'cpu' : 'player';
+    }
+
+    let reasonLabel = 'PUNTO!';
+    if (result.event === 'smash_x3') reasonLabel = 'FUORI GABBIA X3!!';
+    else if (result.event === 'net_fault') reasonLabel = 'FALLO DI RETE!';
+    else if (result.event === 'wall_fault' || result.event === 'out_fault') reasonLabel = 'FUORI DIRETTA!';
+    else if (result.event === 'double_bounce') reasonLabel = 'DOPPIO RIMBALZO!';
+
+    if (winner === 'player') {
+      this.ptsPlayer++;
+      this.arcadeScore += 180 + this.rallyHits * 15;
+      sound.pointJingle(true);
+      this._syncHud(`🟢 ${reasonLabel}`);
+    } else {
+      this.ptsCpu++;
+      this.arcadeScore += 35; // participation rally bonus
+      sound.pointJingle(false);
+      this._syncHud(`🔴 ${reasonLabel}`);
+    }
+
+    // Check game win
+    if (this.ptsPlayer >= 4 && this.ptsPlayer - this.ptsCpu >= 2) {
+      this.gamesPlayer++;
+      this.arcadeScore += 350;
+      this.ptsPlayer = 0;
+      this.ptsCpu = 0;
+      reasonLabel = 'GAME VINTI DA TE!';
+    } else if (this.ptsCpu >= 4 && this.ptsCpu - this.ptsPlayer >= 2) {
+      this.gamesCpu++;
+      this.ptsPlayer = 0;
+      this.ptsCpu = 0;
+      reasonLabel = 'GAME AI MAESTRI!';
+    }
+
+    this._syncHud(reasonLabel);
+
+    // Check match end
+    if (this.gamesPlayer >= this.targetGames || this.gamesCpu >= this.targetGames) {
+      this.matchOver = true;
+      const playerWon = this.gamesPlayer > this.gamesCpu;
+      if (playerWon) {
+        this.arcadeScore += 500;
+      } else {
+        this.arcadeScore = Math.max(120, this.arcadeScore);
+      }
+
+      if (typeof this.callbacks.onMatchEnd === 'function') {
+        this.callbacks.onMatchEnd({
+          won: playerWon,
+          gamesPlayer: this.gamesPlayer,
+          gamesCpu: this.gamesCpu,
+          score: this.arcadeScore,
+        });
+      }
+      return;
+    }
+
+    setTimeout(() => {
+      if (!this.matchOver) {
+        this.resetRally(reasonLabel);
+      }
+    }, 1050);
+  }
+
+  _formatTennisScore(p1, p2) {
+    if (p1 >= 3 && p2 >= 3) {
+      if (p1 === p2) return ['40', '40'];
+      return p1 > p2 ? ['AD', '40'] : ['40', 'AD'];
+    }
+    return [TENNIS_POINTS[Math.min(3, p1)], TENNIS_POINTS[Math.min(3, p2)]];
+  }
+
+  _syncHud(shotBadgeText) {
+    const [s1, s2] = this._formatTennisScore(this.ptsPlayer, this.ptsCpu);
+    const elS1 = document.getElementById('hud-score-p1');
+    const elS2 = document.getElementById('hud-score-cpu');
+    const elG1 = document.getElementById('hud-games-p1');
+    const elG2 = document.getElementById('hud-games-cpu');
+    const elBadge = document.getElementById('hud-shot-badge');
+
+    if (elS1) elS1.textContent = s1;
+    if (elS2) elS2.textContent = s2;
+    if (elG1) elG1.textContent = `G:${this.gamesPlayer}`;
+    if (elG2) elG2.textContent = `G:${this.gamesCpu}`;
+    if (elBadge && shotBadgeText) elBadge.textContent = `${shotBadgeText} (${this.arcadeScore}PT)`;
+  }
+
+  render() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+
+    // 1. Exterior Surroundings (Out-of-court turf)
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+
+    // 2. Blue WPT Padel Turf
+    ctx.fillStyle = '#0284c7';
+    ctx.fillRect(COURT.LEFT, COURT.TOP, COURT.RIGHT - COURT.LEFT, COURT.BOTTOM - COURT.TOP);
+
+    // Checkerboard 8-bit turf texture
+    ctx.fillStyle = '#0369a1';
+    for (let y = COURT.TOP; y < COURT.BOTTOM; y += 16) {
+      ctx.fillRect(COURT.LEFT, y, COURT.RIGHT - COURT.LEFT, 8);
+    }
+
+    // 3. White Court Lines
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(COURT.LEFT, COURT.TOP, COURT.RIGHT - COURT.LEFT, COURT.BOTTOM - COURT.TOP);
+
+    // Service lines
+    ctx.beginPath();
+    ctx.moveTo(COURT.LEFT, COURT.SERVICE_TOP);
+    ctx.lineTo(COURT.RIGHT, COURT.SERVICE_TOP);
+    ctx.moveTo(COURT.LEFT, COURT.SERVICE_BOTTOM);
+    ctx.lineTo(COURT.RIGHT, COURT.SERVICE_BOTTOM);
+    // Center service line
+    ctx.moveTo(160, COURT.SERVICE_TOP);
+    ctx.lineTo(160, COURT.SERVICE_BOTTOM);
+    ctx.stroke();
+
+    // 4. Glass Walls (Cyan Glow) vs Metallic Mesh (Center Side Walls)
+    ctx.strokeStyle = '#67e8f9';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(COURT.LEFT - 2, COURT.TOP - 2, COURT.RIGHT - COURT.LEFT + 4, COURT.BOTTOM - COURT.TOP + 4);
+
+    // Metallic central mesh segments
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(COURT.LEFT - 2, COURT.NET_Y - 40);
+    ctx.lineTo(COURT.LEFT - 2, COURT.NET_Y + 40);
+    ctx.moveTo(COURT.RIGHT + 2, COURT.NET_Y - 40);
+    ctx.lineTo(COURT.RIGHT + 2, COURT.NET_Y + 40);
+    ctx.stroke();
+
+    // 5. Landing Target Crosshair (Mario Tennis GBC style)
+    if (this.ball.inPlay) {
+      const tx = Math.round(this.ball.landingTarget.x);
+      const ty = Math.round(this.ball.landingTarget.y);
+      ctx.strokeStyle = this.ball.isSmash ? '#ef4444' : '#fde047';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx - 5, ty - 5, 10, 10);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(tx - 1, ty - 1, 2, 2);
+    }
+
+    // 6. Top Players (CPU)
+    this.cpuLeft.draw(ctx);
+    this.cpuRight.draw(ctx);
+
+    // 7. Central Net with 8-bit Mesh Pattern
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(COURT.LEFT - 4, COURT.NET_Y - 2, COURT.RIGHT - COURT.LEFT + 8, 5);
+    ctx.fillStyle = '#f8fafc';
+    for (let x = COURT.LEFT; x < COURT.RIGHT; x += 6) {
+      ctx.fillRect(x, COURT.NET_Y - 3, 4, 2);
+    }
+
+    // 8. Bottom Players (Human + Partner)
+    this.partner.draw(ctx);
+    this.human.draw(ctx);
+
+    // 9. Ball Shadow + 2.5D Ball
+    const bx = Math.round(this.ball.x);
+    const by = Math.round(this.ball.y);
+    const bz = Math.round(this.ball.z);
+
+    // Trail for Smash
+    if (this.ball.isSmash) {
+      this.ball.trail.forEach((t, i) => {
+        ctx.fillStyle = i % 2 === 0 ? '#f97316' : '#fde047';
+        ctx.fillRect(Math.round(t.x - 2), Math.round(t.y - t.z - 2), 3, 3);
+      });
+    }
+
+    // Ground shadow at (x, y)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillRect(bx - 2, by - 1, 5, 3);
+
+    // Elevated Ball at (x, y - z)
+    const size = bz > 22 ? 6 : 5;
+    ctx.fillStyle = this.ball.isSmash ? '#fb923c' : '#bef264';
+    ctx.fillRect(bx - 2, by - bz - 2, size, size);
+    ctx.strokeStyle = '#090d16';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx - 2, by - bz - 2, size, size);
+
+    // 10. Retro Event Banner
+    if (this.bannerTimer > 0 && this.bannerText) {
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.85)';
+      ctx.fillRect(26, 108, 268, 28);
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(26, 108, 268, 28);
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '7px "Press Start 2P", monospace';
+      const tw = ctx.measureText(this.bannerText).width;
+      ctx.fillText(this.bannerText, Math.round(160 - tw / 2), 125);
+    }
+  }
 }

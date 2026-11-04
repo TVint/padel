@@ -1,125 +1,144 @@
-/**
- * REBRUNCH // Super Padel DX 2v2 - Partner & CPU 2v2 AI (js/game/ai.js)
- * Implements "Tergicristallo" (windshield wiper) partner positioning
- * and coordinated 2v2 CPU net/baseline tactics.
- */
+// js/game/ai.js - 2v2 Padel Team AI ("Tergicristallo" Wiper Scaling, Callouts & Opponents)
 
-import { COURT, computeLandingPrediction } from './physics.js';
+import { COURT } from './physics.js';
 import { sound } from './audio.js';
 
-export function updateAIPartner(partner, human, ball, rallyActive, triggerCallout) {
-    if (!rallyActive) return;
+export class PadelTeamAI {
+  constructor() {
+    this.lastCalloutTick = 0;
+    this.tick = 0;
+  }
 
-    // 1. "Tergicristallo" (Wiper) Positioning:
-    // If human is on the left half, partner covers the right half (and vice versa).
-    const humanOnLeft = human.x < COURT.centerX;
-    let desiredX = humanOnLeft ? COURT.centerX + 46 : COURT.centerX - 46;
-    // Slight lateral shift toward the ball
-    desiredX += (ball.x - COURT.centerX) * 0.22;
+  updatePartner(partner, human, ball) {
+    this.tick++;
+    if (partner.calloutTimer > 0) partner.calloutTimer--;
+    if (partner.swingTimer > 0) partner.swingTimer--;
 
-    // Vertical complement: if human goes deep, partner holds net; if human charges net, partner guards middle/base
-    let desiredY = human.y > COURT.netY + 80 ? COURT.netY + 42 : COURT.bottom - 48;
-
-    // 2. Intercept incoming ball if it lands on partner's side of the bottom court!
-    const ballComingToBottom = ball.vy > 0 || ball.targetY > COURT.netY;
-    const distHumanToTarget = Math.hypot(human.x - ball.targetX, human.y - ball.targetY);
-    const distPartnerToTarget = Math.hypot(partner.x - ball.targetX, partner.y - ball.targetY);
-
-    if (ballComingToBottom && ball.targetY > COURT.netY + 8 && distPartnerToTarget < distHumanToTarget + 12) {
-        desiredX = ball.targetX;
-        desiredY = Math.max(COURT.netY + 22, Math.min(COURT.bottom - 14, ball.targetY));
-    }
-
-    moveTowards(partner, desiredX, desiredY, COURT.netY + 20, COURT.bottom - 12);
-
-    // 3. Auto-return shot if ball is in partner's reach and coming from CPU
-    if (ball.lastHitterTeam === 'cpu' && ball.y > COURT.netY + 8) {
-        const dist = Math.hypot(partner.x - ball.x, partner.y - ball.y);
-        if (dist < 22 && ball.z < 24 && partner.swingTimer === 0) {
-            partner.swingTimer = 14;
-            const aimX = (Math.random() < 0.5 ? COURT.left + 38 : COURT.right - 38) - ball.x;
-            ball.vx = (aimX / 52) + (Math.random() - 0.5) * 0.5;
-            ball.vy = -3.45;
-            ball.vz = 3.1;
-            ball.bounces = 0;
-            ball.isSmash = false;
-            ball.lastHitterTeam = 'player';
-            computeLandingPrediction(ball);
-            sound.playHit(1.05);
-            triggerCallout('SOCIO!', partner.x, partner.y - 18, '#6bc947');
-        }
-    }
-}
-
-export function updateCPUOpponents(cpu1, cpu2, ball, rallyActive, triggerCallout) {
-    if (!rallyActive) return;
-
-    const ballHeadingTop = ball.vy < 0 || ball.targetY < COURT.netY;
-
-    // Decide which CPU chases the ball
-    const d1 = Math.hypot(cpu1.x - ball.targetX, cpu1.y - ball.targetY);
-    const d2 = Math.hypot(cpu2.x - ball.targetX, cpu2.y - ball.targetY);
-    const chaser = d1 <= d2 ? cpu1 : cpu2;
-    const cover  = d1 <= d2 ? cpu2 : cpu1;
-
-    if (ballHeadingTop && ball.targetY < COURT.netY - 6) {
-        moveTowards(chaser, ball.targetX, Math.max(COURT.top + 14, ball.targetY - 4), COURT.top + 12, COURT.netY - 20);
-        // Teammate covers opposite side in wiper sync
-        const coverX = chaser.x < COURT.centerX ? COURT.centerX + 46 : COURT.centerX - 46;
-        const coverY = chaser.y < COURT.top + 65 ? COURT.netY - 42 : COURT.top + 38;
-        moveTowards(cover, coverX, coverY, COURT.top + 12, COURT.netY - 20);
+    // 1. "Tergicristallo" (Windshield Wiper) Positioning
+    const centerX = 160;
+    const humanOffset = human.x - centerX;
+    let targetX = centerX - humanOffset * 0.65;
+    if (partner.side === 'right') {
+      targetX = Math.max(centerX + 12, Math.min(COURT.RIGHT - 20, targetX + 36));
     } else {
-        // Default balanced 2v2 defense (1 baseline left, 1 net right)
-        moveTowards(cpu1, COURT.centerX - 45 + (ball.x - COURT.centerX) * 0.2, COURT.top + 42, COURT.top + 12, COURT.netY - 20);
-        moveTowards(cpu2, COURT.centerX + 45 + (ball.x - COURT.centerX) * 0.2, COURT.netY - 44, COURT.top + 12, COURT.netY - 20);
+      targetX = Math.max(COURT.LEFT + 20, Math.min(centerX - 12, targetX - 36));
     }
 
-    // Check CPU Shot Execution
-    [cpu1, cpu2].forEach(cpu => {
-        if (ball.lastHitterTeam === 'player' && ball.y < COURT.netY - 6 && cpu.swingTimer === 0) {
-            const dist = Math.hypot(cpu.x - ball.x, cpu.y - ball.y);
-            if (dist < 22 && ball.z < 26) {
-                cpu.swingTimer = 15;
-                const useLob = cpu.y < COURT.top + 38 && Math.random() < 0.32;
-                const targetX = COURT.left + 36 + Math.random() * (COURT.right - COURT.left - 72);
+    // Follow human net-rush or stay balanced
+    let targetY = human.y < COURT.SERVICE_BOTTOM ? human.y + 6 : 196;
 
-                if (useLob) {
-                    ball.vx = (targetX - ball.x) / 68;
-                    ball.vy = 2.45;
-                    ball.vz = 5.1; // High lob!
-                    sound.playLob();
-                    triggerCallout('GLOBO CPU!', cpu.x, cpu.y - 14, '#59b8d9');
-                } else {
-                    ball.vx = (targetX - ball.x) / 50;
-                    ball.vy = 3.55 + Math.random() * 0.55;
-                    ball.vz = 2.85;
-                    sound.playHit(1.0);
-                }
+    // 2. If ball is coming to bottom half and closer to partner, intercept!
+    const ballComingToPlayerSide = ball.inPlay && (ball.vy > 0 || ball.landingTarget.y > COURT.NET_Y);
+    if (ballComingToPlayerSide) {
+      const distPartner = Math.hypot(ball.landingTarget.x - partner.x, ball.landingTarget.y - partner.y);
+      const distHuman = Math.hypot(ball.landingTarget.x - human.x, ball.landingTarget.y - human.y);
 
-                ball.bounces = 0;
-                ball.isSmash = false;
-                ball.lastHitterTeam = 'cpu';
-                computeLandingPrediction(ball);
-            }
+      if (distPartner < distHuman - 6 || ball.landingTarget.x > 175) {
+        targetX = ball.landingTarget.x;
+        targetY = Math.max(COURT.NET_Y + 18, Math.min(COURT.BOTTOM - 12, ball.landingTarget.y));
+
+        if (this.tick - this.lastCalloutTick > 95) {
+          partner.say('MIA!', 42);
+          this.lastCalloutTick = this.tick;
         }
-    });
-}
+      } else if (this.tick - this.lastCalloutTick > 110) {
+        partner.say('VAI TU!', 40);
+        this.lastCalloutTick = this.tick;
+      }
+    }
 
-function moveTowards(entity, targetX, targetY, minY, maxY) {
-    const dx = targetX - entity.x;
-    const dy = targetY - entity.y;
+    this._moveAgent(partner, targetX, targetY);
+
+    // 3. Partner strikes the ball if within reach
+    if (ball.inPlay && ball.lastHitterTeam !== 'player' && partner.canReachBall(ball) && ball.z < 26) {
+      partner.swingTimer = 14;
+      sound.paddleHit(1.05);
+      const aimX = (Math.random() - 0.5) * 2.1;
+      const vy = -3.15 - Math.random() * 0.55;
+      const vz = ball.z > 16 ? 1.85 : 2.55;
+      ball.launch(aimX, vy, vz, 'player', false, (Math.random() - 0.5) * 0.25);
+    }
+  }
+
+  updateOpponents(cpuLeft, cpuRight, ball) {
+    [cpuLeft, cpuRight].forEach((cpu) => {
+      if (cpu.calloutTimer > 0) cpu.calloutTimer--;
+      if (cpu.swingTimer > 0) cpu.swingTimer--;
+    });
+
+    const ballHeadingTop = ball.inPlay && (ball.vy < 0 || ball.landingTarget.y < COURT.NET_Y);
+
+    let leftTargetX = 112;
+    let leftTargetY = 58;
+    let rightTargetX = 208;
+    let rightTargetY = 58;
+
+    if (ballHeadingTop) {
+      const tx = ball.landingTarget.x;
+      const ty = Math.max(COURT.TOP + 12, Math.min(COURT.NET_Y - 18, ball.landingTarget.y));
+
+      if (tx < 160) {
+        leftTargetX = tx;
+        leftTargetY = ty;
+        rightTargetX = Math.min(242, tx + 88);
+        rightTargetY = Math.min(COURT.NET_Y - 24, ty + 14);
+      } else {
+        rightTargetX = tx;
+        rightTargetY = ty;
+        leftTargetX = Math.max(78, tx - 88);
+        leftTargetY = Math.min(COURT.NET_Y - 24, ty + 14);
+      }
+    } else {
+      const shift = (ball.x - 160) * 0.22;
+      leftTargetX = 112 + shift;
+      rightTargetX = 208 + shift;
+      leftTargetY = 64;
+      rightTargetY = 64;
+    }
+
+    this._moveAgent(cpuLeft, leftTargetX, leftTargetY);
+    this._moveAgent(cpuRight, rightTargetX, rightTargetY);
+
+    [cpuLeft, cpuRight].forEach((cpu) => {
+      if (ball.inPlay && ball.lastHitterTeam !== 'cpu' && cpu.canReachBall(ball) && ball.z < 28) {
+        cpu.swingTimer = 14;
+        const isHighNearNet = ball.z > 18 && cpu.y > COURT.SERVICE_TOP;
+        if (isHighNearNet && Math.random() < 0.35) {
+          sound.smashHit();
+          cpu.say('VAMOS!', 35);
+          ball.launch((Math.random() - 0.5) * 2.4, 3.85, -1.0, 'cpu', true, 0.25);
+        } else if (Math.random() < 0.22) {
+          sound.paddleHit(0.85);
+          cpu.say('GLOBO!', 35);
+          ball.launch((Math.random() - 0.5) * 1.6, 2.35, 4.7, 'cpu', false, 0);
+        } else {
+          sound.paddleHit(1.0);
+          const targetVx = ((160 - cpu.x) / 90) + (Math.random() - 0.5) * 1.7;
+          ball.launch(targetVx, 3.0 + Math.random() * 0.65, 2.35, 'cpu', false, (Math.random() - 0.5) * 0.2);
+        }
+      }
+    });
+  }
+
+  _moveAgent(agent, tx, ty) {
+    const dx = tx - agent.x;
+    const dy = ty - agent.y;
     const dist = Math.hypot(dx, dy);
 
-    if (dist > 2.5) {
-        entity.vx = (dx / dist) * entity.speed;
-        entity.vy = (dy / dist) * entity.speed;
-        entity.x += entity.vx;
-        entity.y += entity.vy;
+    if (dist > 2.2) {
+      agent.vx = (dx / dist) * agent.speed;
+      agent.vy = (dy / dist) * agent.speed;
+      agent.x += agent.vx;
+      agent.y += agent.vy;
+      agent._clampToHalfCourt();
+      agent.animTimer++;
+      if (agent.animTimer % 7 === 0) {
+        agent.animFrame = (agent.animFrame + 1) % 2;
+      }
     } else {
-        entity.vx = 0;
-        entity.vy = 0;
+      agent.vx = 0;
+      agent.vy = 0;
+      agent.animFrame = 0;
     }
-
-    entity.x = Math.max(COURT.left + 10, Math.min(COURT.right - 10, entity.x));
-    entity.y = Math.max(minY, Math.min(maxY, entity.y));
+  }
 }

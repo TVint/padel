@@ -1,495 +1,538 @@
 <?php
-/**
- * REBRUNCH // Republic Sport Village - Admin Dashboard ("PC DI BILL" 8-BIT EDITION)
- * Password configurabile qui sotto: PADEL2026 o GBCPADEL2026
- */
+// admin.php - REBRUNCH // Republic Sport Village - Admin Dashboard (Leaderboard & GBC Click Heatmap)
 declare(strict_types=1);
-const ADMIN_PASSWORDS = ['PADEL2026', 'GBCPADEL2026'];
+session_start();
+require_once __DIR__ . '/api/db.php';
+
+$ADMIN_PASS = 'padel2026';
+$loginError = '';
+
+if (isset($_GET['logout'])) {
+    unset($_SESSION['rebrunch_admin']);
+    header('Location: admin.php');
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password'])) {
+    if ($_POST['password'] === $ADMIN_PASS) {
+        $_SESSION['rebrunch_admin'] = true;
+        header('Location: admin.php');
+        exit;
+    } else {
+        $loginError = 'PASSWORD ERRATA! RIPROVA.';
+    }
+}
+
+$isAuthed = !empty($_SESSION['rebrunch_admin']);
+$pdo = get_db();
+
+if ($isAuthed && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_score_id'])) {
+    $delId = (int)$_POST['delete_score_id'];
+    if ($delId > 0) {
+        $stmt = $pdo->prepare("DELETE FROM leaderboard WHERE id = :id");
+        $stmt->execute([':id' => $delId]);
+    }
+    $redirectDate = isset($_GET['date']) && $_GET['date'] !== '' ? '?date=' . urlencode((string)$_GET['date']) : '';
+    header('Location: admin.php' . $redirectDate);
+    exit;
+}
+
+$dateFilter = trim((string)($_GET['date'] ?? ''));
+$leaderboard = [];
+$clickMap = [
+    'green_brunch'  => 0,
+    'red_aperitivo' => 0,
+    'yellow_torneo' => 0,
+    'play_game'     => 0,
+];
+$totalClicks = 0;
+
+if ($isAuthed) {
+    if ($dateFilter !== '') {
+        $stmt = $pdo->prepare("SELECT id, name, score, date FROM leaderboard WHERE substr(date, 1, 10) = :d ORDER BY score DESC, id DESC");
+        $stmt->execute([':d' => $dateFilter]);
+        $leaderboard = $stmt->fetchAll();
+    } else {
+        $leaderboard = $pdo->query("SELECT id, name, score, date FROM leaderboard ORDER BY score DESC, id DESC")->fetchAll();
+    }
+
+    $clickRows = $pdo->query("SELECT area_clicked, click_count FROM click_stats")->fetchAll();
+    foreach ($clickRows as $r) {
+        $clickMap[$r['area_clicked']] = (int)$r['click_count'];
+        $totalClicks += (int)$r['click_count'];
+    }
+}
+
+function heat_alpha(int $count, int $maxCount): string {
+    if ($maxCount <= 0 || $count <= 0) return '0.25';
+    $ratio = min(1.0, max(0.25, $count / $maxCount));
+    return number_format($ratio, 2, '.', '');
+}
+$maxClick = max(1, max($clickMap));
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PC DI BILL // REBRUNCH ADMIN DASHBOARD</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/retro.css">
-<style>
-    body.admin-body {
-        background: #1b2230;
-        color: #f0f4e8;
-        font-family: 'Press Start 2P', monospace;
-        min-height: 100vh;
-        padding: 24px 16px 60px;
-        display: block;
-        overflow-y: auto;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ADMIN // REBRUNCH GBC ADVERGAME</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0d14;
+      --card: #16192b;
+      --border: #38bdf8;
+      --gold: #facc15;
+      --green: #22c55e;
+      --red: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
     }
-    .pc-shell {
-        max-width: 1180px;
-        margin: 0 auto;
-        background: #39445b;
-        border: 6px solid #141923;
-        box-shadow:
-            inset 4px 4px 0 #576582,
-            inset -4px -4px 0 #232b3b,
-            0 12px 0 #0e121a;
-        padding: 20px;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at top, #1e1b4b 0%, #090a10 100%);
+      color: var(--text);
+      font-family: 'Press Start 2P', monospace;
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+      line-height: 1.5;
     }
-    .pc-header {
-        background: #5b7c68;
-        border: 4px solid #141923;
-        color: #101e14;
-        padding: 16px;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 20px;
-        box-shadow: inset 3px 3px 0 #7aa089;
+    .container { max-width: 1180px; margin: 0 auto; }
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--card);
+      border: 4px solid var(--gold);
+      box-shadow: 0 6px 0 #000;
+      margin-bottom: 24px;
     }
-    .pc-title {
-        font-size: 15px;
-        line-height: 1.5;
-        color: #ffde3b;
-        text-shadow: 2px 2px 0 #141923;
+    .top-bar h1 { font-size: 13px; color: var(--gold); }
+    .top-bar .sub { font-size: 8px; color: var(--border); margin-top: 4px; }
+    .btn {
+      display: inline-block;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      padding: 10px 14px;
+      background: var(--green);
+      color: #052e16;
+      border: 3px solid #fff;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #000;
     }
-    .pc-sub {
-        font-size: 9px;
-        color: #e6f5ea;
-        margin-top: 4px;
-    }
+    .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-blue { background: var(--border); color: #082f49; }
+
     .login-box {
-        max-width: 480px;
-        margin: 50px auto;
-        background: #5b7c68;
-        border: 4px solid #141923;
-        padding: 24px;
-        color: #101e14;
-        text-align: center;
-        box-shadow: 8px 8px 0 #141923;
+      max-width: 420px;
+      margin: 80px auto;
+      background: var(--card);
+      border: 4px solid var(--gold);
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 10px 0 #000;
     }
-    .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 14px;
-        margin-bottom: 22px;
+    .login-box h2 { font-size: 12px; color: var(--gold); margin-bottom: 16px; }
+    .login-box input {
+      width: 100%;
+      padding: 12px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      background: #090a10;
+      color: #fff;
+      border: 3px solid var(--border);
+      margin-bottom: 16px;
+      text-align: center;
     }
-    .kpi-card {
-        background: #273042;
-        border: 4px solid #141923;
-        padding: 14px;
-        box-shadow: inset 3px 3px 0 #3f4c66;
-    }
-    .kpi-label {
-        font-size: 9px;
-        color: #9bb8a6;
-        margin-bottom: 10px;
-        line-height: 1.4;
-    }
-    .kpi-val {
-        font-size: 24px;
-        color: #f5b82e;
-        text-shadow: 2px 2px 0 #141923;
-        margin-bottom: 8px;
-    }
-    .kpi-sub {
-        font-size: 8px;
-        color: #d6e4da;
-        line-height: 1.6;
-    }
-    .admin-toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-    }
-    .tab-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-    .pix-btn {
-        font-family: 'Press Start 2P', monospace;
-        font-size: 9px;
-        padding: 10px 12px;
-        border: 3px solid #141923;
-        background: #f5b82e;
-        color: #141923;
-        cursor: pointer;
-        box-shadow: 3px 3px 0 #141923;
-        text-decoration: none;
-        display: inline-block;
-    }
-    .pix-btn:hover { filter: brightness(1.1); }
-    .pix-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #141923; }
-    .pix-btn.active { background: #6bc947; color: #0e1d0b; }
-    .pix-btn.danger { background: #d33636; color: #fff; padding: 6px 8px; font-size: 8px; }
-    .pix-btn.secondary { background: #7aa089; color: #101e14; }
+    .err { color: var(--red); font-size: 9px; margin-bottom: 12px; }
 
-    .table-wrap {
-        background: #5b7c68;
-        border: 4px solid #141923;
-        padding: 12px;
-        overflow-x: auto;
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: start;
     }
-    table.retro-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 9px;
-        color: #101e14;
+    @media (max-width: 920px) {
+      .admin-grid { grid-template-columns: 1fr; }
     }
-    table.retro-table th {
-        background: #273042;
-        color: #f5b82e;
-        padding: 10px 8px;
-        text-align: left;
-        border: 2px solid #141923;
-        white-space: nowrap;
+
+    .panel {
+      background: var(--card);
+      border: 4px solid #334155;
+      padding: 18px;
+      box-shadow: 0 6px 0 #000;
     }
-    table.retro-table td {
-        padding: 9px 8px;
-        border: 2px solid #2b4234;
-        background: #dcebe1;
-        line-height: 1.5;
-        vertical-align: middle;
+    .panel h2 {
+      font-size: 11px;
+      color: var(--gold);
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    table.retro-table tr:nth-child(even) td {
-        background: #c7dfd0;
+
+    /* Stylized Game Boy Color Heatmap */
+    .gbc-heatmap-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
     }
-    .badge {
-        display: inline-block;
-        padding: 3px 6px;
-        font-size: 8px;
-        border: 2px solid #141923;
+    .gbc-mini-shell {
+      position: relative;
+      width: 280px;
+      height: 450px;
+      background: linear-gradient(165deg, #fbbf24 0%, #f59e0b 55%, #d97706 100%);
+      border-radius: 18px 18px 42px 18px;
+      border: 5px solid #1e293b;
+      box-shadow: inset 0 4px 0 rgba(255,255,255,0.45), 0 10px 0 #000;
+      padding: 16px;
+      user-select: none;
     }
-    .badge-padel { background: #6bc947; color: #101e14; }
-    .badge-tennis { background: #f5b82e; color: #101e14; }
-    .badge-brunch { background: #48b8d0; color: #101e14; }
-    .badge-warn { background: #d33636; color: #ffffff; animation: blink-anim 1s step-end infinite; }
-    .badge-ok { background: #273042; color: #6bc947; }
-    .retro-input {
-        font-family: 'Press Start 2P', monospace;
-        font-size: 11px;
-        padding: 10px;
-        width: 100%;
-        border: 3px solid #141923;
-        background: #e6f5ea;
-        color: #101e14;
-        margin: 12px 0;
+    .gbc-mini-lens {
+      background: #1e293b;
+      border-radius: 10px 10px 24px 10px;
+      padding: 12px;
+      border: 3px solid #0f172a;
     }
-</style>
+    .gbc-mini-lcd {
+      background: #0f380f;
+      border: 3px solid #000;
+      height: 155px;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8px;
+      color: #9bbc0f;
+    }
+    .gbc-mini-lcd .lcd-title { font-size: 9px; color: #facc15; margin-bottom: 6px; }
+    .gbc-mini-lcd .lcd-sub { font-size: 7px; color: #8bac0f; line-height: 1.6; }
+    .gbc-mini-brand {
+      text-align: center;
+      font-size: 8px;
+      color: #1e293b;
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+    .gbc-mini-controls {
+      position: relative;
+      height: 210px;
+      margin-top: 10px;
+    }
+    /* Mini D-Pad */
+    .mini-dpad {
+      position: absolute;
+      left: 14px;
+      top: 34px;
+      width: 68px;
+      height: 68px;
+    }
+    .mini-dpad::before, .mini-dpad::after {
+      content: '';
+      position: absolute;
+      background: #1e293b;
+      border: 2px solid #000;
+      border-radius: 3px;
+    }
+    .mini-dpad::before { left: 22px; top: 0; width: 24px; height: 68px; }
+    .mini-dpad::after  { left: 0; top: 22px; width: 68px; height: 24px; }
+
+    /* Heatmap Hotspot Badges on Buttons */
+    .heat-node {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid #fff;
+      color: #fff;
+      font-size: 8px;
+      text-shadow: 1px 1px 0 #000;
+      box-shadow: 0 4px 0 #000;
+      transition: transform 0.15s;
+    }
+    .heat-node:hover { transform: scale(1.08); z-index: 5; }
+    .heat-node .count {
+      font-size: 10px;
+      font-weight: bold;
+      color: #fff;
+    }
+    .heat-node .lbl {
+      font-size: 6px;
+      margin-top: 2px;
+      color: #f8fafc;
+    }
+
+    /* Red Button (Aperitivo) */
+    .heat-red {
+      right: 12px;
+      top: 16px;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 22px rgba(239, 68, 68, <?= heat_alpha($clickMap['red_aperitivo'], $maxClick) ?>), 0 4px 0 #000;
+    }
+    /* Green Button (Brunch) */
+    .heat-green {
+      right: 74px;
+      top: 40px;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 22px rgba(34, 197, 94, <?= heat_alpha($clickMap['green_brunch'], $maxClick) ?>), 0 4px 0 #000;
+    }
+    /* Yellow Button (Torneo) */
+    .heat-yellow {
+      right: 36px;
+      top: 86px;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: #eab308;
+      color: #000;
+      box-shadow: 0 0 22px rgba(234, 179, 8, <?= heat_alpha($clickMap['yellow_torneo'], $maxClick) ?>), 0 4px 0 #000;
+    }
+    /* GIOCA Horizontal Button */
+    .heat-play {
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%);
+      width: 156px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%);
+      box-shadow: 0 0 24px rgba(239, 68, 68, <?= heat_alpha($clickMap['play_game'], $maxClick) ?>), 0 4px 0 #000;
+    }
+    .heat-play:hover { transform: translateX(-50%) scale(1.06); }
+
+    .click-legend {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 8px;
+    }
+    .legend-item {
+      background: #0f172a;
+      border: 2px solid #334155;
+      padding: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Filter Bar & Table */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      background: #0f172a;
+      padding: 12px;
+      border: 2px solid #334155;
+    }
+    .filter-bar label { font-size: 8px; color: var(--muted); }
+    .filter-bar input[type="date"] {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      padding: 8px 10px;
+      background: #16192b;
+      color: #fff;
+      border: 2px solid var(--border);
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9px;
+    }
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 2px solid #1e293b;
+      text-align: left;
+    }
+    th {
+      background: #090a10;
+      color: var(--border);
+      font-size: 8px;
+      text-transform: uppercase;
+    }
+    tr:hover td { background: rgba(56, 189, 248, 0.06); }
+    .badge-score {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #052e16;
+      color: #4ade80;
+      border: 2px solid #22c55e;
+      font-size: 9px;
+    }
+  </style>
 </head>
-<body class="admin-body">
-
-<div class="pc-shell">
-    <div class="pc-header">
-        <div>
-            <div class="pc-title">💾 SISTEMA PC DI BILL // REBRUNCH ADMIN</div>
-            <div class="pc-sub">REPUBLIC SPORT VILLAGE - DOMENICA 29 NOVEMBRE (10:00 - 14:30)</div>
-        </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-            <a href="index.html" class="pix-btn secondary">◄ CONSOLE GBC</a>
-            <button id="btn-logout" class="pix-btn danger" style="display:none;">ESCI</button>
-        </div>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <div>
+        <h1>🕹️ REBRUNCH // ADMIN &amp; CLICK HEATMAP</h1>
+        <div class="sub">REPUBLIC SPORT VILLAGE - PADEL ADVERGAME ANALYTICS</div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn btn-blue" href="index.html">⬅ TORNA AL GAME BOY</a>
+        <?php if ($isAuthed): ?>
+          <a class="btn" href="api/stats.php?action=export_csv">⬇ EXPORT CSV</a>
+          <a class="btn btn-red" href="admin.php?logout=1">ESCI</a>
+        <?php endif; ?>
+      </div>
     </div>
 
-    <!-- LOGIN PANEL -->
-    <div id="login-panel" class="login-box">
-        <div style="font-size:12px; margin-bottom:10px;">🔒 ACCESSO ORGANIZZATORI</div>
-        <p style="font-size:8px; line-height:1.6; margin-bottom:10px;">
-            INSERISCI LA PASSWORD SEGRETA DEL CIRCOLO<br>(Default: <strong>PADEL2026</strong> o <strong>GBCPADEL2026</strong>)
-        </p>
-        <form id="login-form">
-            <input type="password" id="admin-pass" class="retro-input" placeholder="PASSWORD..." required autocomplete="current-password">
-            <button type="submit" class="pix-btn active" style="width:100%;">[ ACCEDI AL PC DI BILL ]</button>
-            <div id="login-err" style="color:#d33636; font-size:8px; margin-top:10px; display:none;">PASSWORD ERRATA!</div>
+    <?php if (!$isAuthed): ?>
+      <div class="login-box">
+        <h2>🔒 ACCESSO ORGANIZZATORI</h2>
+        <?php if ($loginError): ?>
+          <div class="err"><?= htmlspecialchars($loginError) ?></div>
+        <?php endif; ?>
+        <form method="POST" action="admin.php">
+          <input type="password" name="password" placeholder="PASSWORD ADMIN" required autofocus />
+          <button type="submit" class="btn" style="width:100%;">ENTRA NELLA DASHBOARD</button>
         </form>
-    </div>
+        <p style="font-size:7px; color:#64748b; margin-top:14px;">Password demo: padel2026</p>
+      </div>
+    <?php else: ?>
+      <div class="admin-grid">
+        <!-- LEFT COLUMN: GAME BOY MINI-GRAPHIC CLICK HEATMAP -->
+        <div class="panel">
+          <h2>
+            <span>🔥 GBC CLICK HEATMAP</span>
+            <span style="font-size:8px; color:var(--border);">TOT: <?= (int)$totalClicks ?></span>
+          </h2>
+          <div class="gbc-heatmap-wrap">
+            <div class="gbc-mini-shell">
+              <div class="gbc-mini-lens">
+                <div class="gbc-mini-lcd">
+                  <div class="lcd-title">REBRUNCH 29.11</div>
+                  <div class="lcd-sub">HEATMAP INTERAZIONI<br>PULSANTI CONSOLE</div>
+                </div>
+              </div>
+              <div class="gbc-mini-brand">GAME BOY COLOR</div>
 
-    <!-- DASHBOARD PANEL -->
-    <div id="dashboard-panel" style="display:none;">
-        <!-- KPI CARDS -->
-        <div class="kpi-grid">
-            <div class="kpi-card">
-                <div class="kpi-label">TOTALE ISCRITTI</div>
-                <div class="kpi-val" id="kpi-total">0</div>
-                <div class="kpi-sub" id="kpi-total-sub">Schede giocatore registrate</div>
+              <div class="gbc-mini-controls">
+                <div class="mini-dpad" title="D-Pad"></div>
+
+                <!-- RED BUTTON: APERITIVO -->
+                <div class="heat-node heat-red" title="Pulsante Rosso (Aperitivo)">
+                  <span class="count"><?= (int)$clickMap['red_aperitivo'] ?></span>
+                  <span class="lbl">APERITIVO</span>
+                </div>
+
+                <!-- GREEN BUTTON: BRUNCH -->
+                <div class="heat-node heat-green" title="Pulsante Verde (Brunch)">
+                  <span class="count"><?= (int)$clickMap['green_brunch'] ?></span>
+                  <span class="lbl">BRUNCH</span>
+                </div>
+
+                <!-- YELLOW BUTTON: TORNEO -->
+                <div class="heat-node heat-yellow" title="Pulsante Giallo (Torneo)">
+                  <span class="count"><?= (int)$clickMap['yellow_torneo'] ?></span>
+                  <span class="lbl">TORNEO</span>
+                </div>
+
+                <!-- GIOCA BUTTON -->
+                <div class="heat-node heat-play" title="Tasto GIOCA (Avvio Partita)">
+                  <span class="count">🕹️ <?= (int)$clickMap['play_game'] ?></span>
+                  <span class="lbl">TASTO GIOCA</span>
+                </div>
+              </div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">TORNEO PADEL DOPPIO</div>
-                <div class="kpi-val" id="kpi-padel" style="color:#6bc947;">0</div>
-                <div class="kpi-sub" id="kpi-padel-sub">M: 0 | F: 0 | MISTO: 0<br>Cerca Partner: 0</div>
+
+            <div class="click-legend">
+              <div class="legend-item">
+                <span style="color:#4ade80;">🟢 BRUNCH</span>
+                <strong><?= (int)$clickMap['green_brunch'] ?></strong>
+              </div>
+              <div class="legend-item">
+                <span style="color:#f87171;">🔴 APERITIVO</span>
+                <strong><?= (int)$clickMap['red_aperitivo'] ?></strong>
+              </div>
+              <div class="legend-item">
+                <span style="color:#facc15;">🟡 TORNEO</span>
+                <strong><?= (int)$clickMap['yellow_torneo'] ?></strong>
+              </div>
+              <div class="legend-item">
+                <span style="color:#fb923c;">🕹️ GIOCA</span>
+                <strong><?= (int)$clickMap['play_game'] ?></strong>
+              </div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">TORNEO TENNIS SINGOLO</div>
-                <div class="kpi-val" id="kpi-tennis" style="color:#48b8d0;">0</div>
-                <div class="kpi-sub">Tabellone singolare</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-label">TOTALE COPERTI BRUNCH</div>
-                <div class="kpi-val" id="kpi-brunch" style="color:#ff6b6b;">0</div>
-                <div class="kpi-sub" id="kpi-brunch-sub">Somma posti prenotati (1-5/iscritto)</div>
-            </div>
+          </div>
         </div>
 
-        <!-- TOOLBAR & FILTERS -->
-        <div class="admin-toolbar">
-            <div class="tab-group">
-                <button class="pix-btn active" data-filter="all">TUTTI GLI ISCRITTI</button>
-                <button class="pix-btn" data-filter="padel">TORNEO PADEL</button>
-                <button class="pix-btn" data-filter="tennis">TORNEO TENNIS</button>
-                <button class="pix-btn" data-filter="brunch">PRENOTAZIONI BRUNCH</button>
-                <button class="pix-btn" data-filter="matches">🏆 HALL OF FAME (MINIGAME)</button>
-            </div>
-            <div style="display:flex; gap:8px;">
-                <button id="btn-refresh" class="pix-btn secondary">↻ AGGIORNA</button>
-                <a id="btn-export-csv" href="#" class="pix-btn">[ ESPORTA CSV ]</a>
-            </div>
-        </div>
+        <!-- RIGHT COLUMN: LEADERBOARD TABLE WITH DATE FILTER & DELETE -->
+        <div class="panel">
+          <h2>
+            <span>🏆 CLASSIFICA ADVERGAME (<?= count($leaderboard) ?>)</span>
+          </h2>
 
-        <!-- REGISTRATIONS TABLE -->
-        <div class="table-wrap" id="reg-table-wrap">
-            <table class="retro-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>GIOCATORE</th>
-                        <th>TELEFONO</th>
-                        <th>ATTIVITÀ</th>
-                        <th>CAT. PADEL / PARTNER</th>
-                        <th>BRUNCH (POSTI)</th>
-                        <th>NOTE / INTOLLERANZE</th>
-                        <th>DATA</th>
-                        <th>AZIONI</th>
-                    </tr>
-                </thead>
-                <tbody id="reg-tbody">
-                    <tr><td colspan="9" style="text-align:center;">CARICAMENTO DATI DAL POKÉDEX...</td></tr>
-                </tbody>
-            </table>
-        </div>
+          <form method="GET" action="admin.php" class="filter-bar">
+            <label for="filter-date">FILTRA PER DATA:</label>
+            <input type="date" id="filter-date" name="date" value="<?= htmlspecialchars($dateFilter) ?>" />
+            <button type="submit" class="btn btn-blue">FILTRA</button>
+            <?php if ($dateFilter !== ''): ?>
+              <a href="admin.php" class="btn btn-red">RESET</a>
+            <?php endif; ?>
+          </form>
 
-        <!-- MATCHES TABLE -->
-        <div class="table-wrap" id="matches-table-wrap" style="display:none;">
-            <table class="retro-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>GIOCATORE</th>
-                        <th>AVVERSARIO</th>
-                        <th>PUNTEGGIO</th>
-                        <th>ESITO</th>
-                        <th>DATA MATCH</th>
-                        <th>AZIONI</th>
-                    </tr>
-                </thead>
-                <tbody id="matches-tbody">
-                    <tr><td colspan="7" style="text-align:center;">NESSUNA PARTITA REGISTRATA</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<script>
-(() => {
-    const STORAGE_KEY = 'rebrunch_admin_key';
-    let adminKey = sessionStorage.getItem(STORAGE_KEY) || '';
-    let currentFilter = 'all';
-    let cachedData = { registrations: [], matches: [], counts: {} };
-
-    const loginPanel = document.getElementById('login-panel');
-    const dashPanel  = document.getElementById('dashboard-panel');
-    const loginForm  = document.getElementById('login-form');
-    const passInput  = document.getElementById('admin-pass');
-    const loginErr   = document.getElementById('login-err');
-    const btnLogout  = document.getElementById('btn-logout');
-    const btnRefresh = document.getElementById('btn-refresh');
-    const btnCsv     = document.getElementById('btn-export-csv');
-    const regTbody   = document.getElementById('reg-tbody');
-    const matchTbody = document.getElementById('matches-tbody');
-    const regWrap    = document.getElementById('reg-table-wrap');
-    const matchWrap  = document.getElementById('matches-table-wrap');
-
-    function escapeHtml(str) {
-        return String(str ?? '').replace(/[&<>"']/g, s => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[s]));
-    }
-
-    async function fetchStats(keyToTry) {
-        const res = await fetch(`api/stats.php?key=${encodeURIComponent(keyToTry)}&_=${Date.now()}`);
-        if (!res.ok) throw new Error('Unauthorized');
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error || 'Errore');
-        return data;
-    }
-
-    function renderKPIs(c) {
-        document.getElementById('kpi-total').textContent = c.total_registrations ?? 0;
-        document.getElementById('kpi-total-sub').textContent =
-            `Solo Brunch/Tifo: ${c.brunch_only_total ?? 0}`;
-        document.getElementById('kpi-padel').textContent = c.padel_total ?? 0;
-        document.getElementById('kpi-padel-sub').innerHTML =
-            `M: ${c.padel_maschile ?? 0} | F: ${c.padel_femminile ?? 0} | MISTO: ${c.padel_misto ?? 0}<br>` +
-            `🔍 Cerca Partner: <strong>${c.padel_seeking_partner ?? 0}</strong>`;
-        document.getElementById('kpi-tennis').textContent = c.tennis_total ?? 0;
-        document.getElementById('kpi-brunch').textContent = c.brunch_total_seats ?? 0;
-    }
-
-    function renderTables() {
-        if (currentFilter === 'matches') {
-            regWrap.style.display = 'none';
-            matchWrap.style.display = 'block';
-            const matches = cachedData.matches || [];
-            if (matches.length === 0) {
-                matchTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">NESSUN MATCH GIOCATO FINORA</td></tr>';
-                return;
-            }
-            matchTbody.innerHTML = matches.map(m => `
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                    <td>#${m.id}</td>
-                    <td><strong>${escapeHtml(m.player_name)}</strong></td>
-                    <td>${escapeHtml(m.opponent_name)}</td>
-                    <td><strong>NOI ${m.player_score} - ${m.cpu_score} CPU</strong></td>
-                    <td>${Number(m.won) ? '<span class="badge badge-padel">VITTORIA</span>' : '<span class="badge badge-tennis">SCONFITTA</span>'}</td>
-                    <td>${escapeHtml(m.created_at)}</td>
-                    <td><button class="pix-btn danger" data-del-match="${m.id}">ELIMINA</button></td>
+                  <th>#</th>
+                  <th>ID</th>
+                  <th>GIOCATORE</th>
+                  <th>PUNTEGGIO</th>
+                  <th>DATA &amp; ORA</th>
+                  <th>AZIONI</th>
                 </tr>
-            `).join('');
-            return;
-        }
-
-        regWrap.style.display = 'block';
-        matchWrap.style.display = 'none';
-
-        let rows = cachedData.registrations || [];
-        if (currentFilter === 'padel') {
-            rows = rows.filter(r => r.activity === 'padel');
-        } else if (currentFilter === 'tennis') {
-            rows = rows.filter(r => r.activity === 'tennis');
-        } else if (currentFilter === 'brunch') {
-            rows = rows.filter(r => Number(r.join_brunch) === 1);
-        }
-
-        if (rows.length === 0) {
-            regTbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">NESSUN ISCRITTO IN QUESTA CATEGORIA</td></tr>';
-            return;
-        }
-
-        regTbody.innerHTML = rows.map(r => {
-            let actBadge = '<span class="badge badge-brunch">SOLO BRUNCH</span>';
-            if (r.activity === 'padel') actBadge = '<span class="badge badge-padel">PADEL DOPPIO</span>';
-            if (r.activity === 'tennis') actBadge = '<span class="badge badge-tennis">TENNIS SINGOLO</span>';
-
-            let partnerCell = '-';
-            if (r.activity === 'padel') {
-                const pName = (r.partner_name || '').trim();
-                const partnerBadge = pName
-                    ? `<span class="badge badge-ok">CON: ${escapeHtml(pName)}</span>`
-                    : `<span class="badge badge-warn">CERCA PARTNER!</span>`;
-                partnerCell = `<div><strong>${escapeHtml(r.padel_category || 'Misto')}</strong></div><div style="margin-top:4px;">${partnerBadge}</div>`;
-            }
-
-            const brunchCell = Number(r.join_brunch)
-                ? `<span class="badge badge-padel">SÌ (${r.brunch_seats} POSTI)</span>`
-                : `<span class="badge">NO</span>`;
-
-            const notesCell = (r.dietary_notes || '').trim()
-                ? `<strong style="color:#b31b1b;">⚠️ ${escapeHtml(r.dietary_notes)}</strong>`
-                : '-';
-
-            return `
-                <tr>
-                    <td>#${r.id}</td>
-                    <td><strong>${escapeHtml(r.full_name)}</strong></td>
-                    <td>${escapeHtml(r.phone)}</td>
-                    <td>${actBadge}</td>
-                    <td>${partnerCell}</td>
-                    <td>${brunchCell}</td>
-                    <td>${notesCell}</td>
-                    <td>${escapeHtml(r.created_at)}</td>
-                    <td><button class="pix-btn danger" data-del-reg="${r.id}">ELIMINA</button></td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    async function loadDashboard(key) {
-        try {
-            const data = await fetchStats(key);
-            adminKey = key;
-            sessionStorage.setItem(STORAGE_KEY, key);
-            cachedData = data;
-
-            loginPanel.style.display = 'none';
-            dashPanel.style.display  = 'block';
-            btnLogout.style.display  = 'inline-block';
-            btnCsv.href = `api/stats.php?export=csv&key=${encodeURIComponent(adminKey)}`;
-
-            renderKPIs(data.counts || {});
-            renderTables();
-        } catch (err) {
-            loginPanel.style.display = 'block';
-            dashPanel.style.display  = 'none';
-            if (key) {
-                loginErr.style.display = 'block';
-            }
-        }
-    }
-
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        loginErr.style.display = 'none';
-        loadDashboard(passInput.value.trim());
-    });
-
-    btnLogout.addEventListener('click', () => {
-        sessionStorage.removeItem(STORAGE_KEY);
-        adminKey = '';
-        dashPanel.style.display = 'none';
-        btnLogout.style.display = 'none';
-        loginPanel.style.display = 'block';
-        passInput.value = '';
-    });
-
-    btnRefresh.addEventListener('click', () => loadDashboard(adminKey));
-
-    document.querySelectorAll('.tab-group .pix-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab-group .pix-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.dataset.filter;
-            renderTables();
-        });
-    });
-
-    document.addEventListener('click', async (e) => {
-        const delRegBtn = e.target.closest('[data-del-reg]');
-        if (delRegBtn) {
-            const id = delRegBtn.getAttribute('data-del-reg');
-            if (confirm(`Eliminare definitivamente l'iscrizione #${id}?`)) {
-                await fetch(`api/stats.php?action=delete_registration&id=${id}&key=${encodeURIComponent(adminKey)}`, { method: 'POST' });
-                loadDashboard(adminKey);
-            }
-        }
-        const delMatchBtn = e.target.closest('[data-del-match]');
-        if (delMatchBtn) {
-            const id = delMatchBtn.getAttribute('data-del-match');
-            if (confirm(`Eliminare il match #${id} dalla Hall of Fame?`)) {
-                await fetch(`api/stats.php?action=delete_match&id=${id}&key=${encodeURIComponent(adminKey)}`, { method: 'POST' });
-                loadDashboard(adminKey);
-            }
-        }
-    });
-
-    if (adminKey) {
-        loadDashboard(adminKey);
-    }
-})();
-</script>
+              </thead>
+              <tbody>
+                <?php if (empty($leaderboard)): ?>
+                  <tr>
+                    <td colspan="6" style="text-align:center; color:#64748b; padding:24px;">
+                      NESSUN PUNTEGGIO REGISTRATO PER QUESTA DATA.
+                    </td>
+                  </tr>
+                <?php else: foreach ($leaderboard as $idx => $row): ?>
+                  <tr>
+                    <td style="color:var(--gold);">#<?= $idx + 1 ?></td>
+                    <td><?= (int)$row['id'] ?></td>
+                    <td style="color:#fff; font-weight:bold;"><?= htmlspecialchars($row['name']) ?></td>
+                    <td><span class="badge-score"><?= (int)$row['score'] ?> PTS</span></td>
+                    <td style="color:#94a3b8; font-size:8px;"><?= htmlspecialchars($row['date']) ?></td>
+                    <td>
+                      <form method="POST" action="admin.php<?= $dateFilter !== '' ? '?date=' . urlencode($dateFilter) : '' ?>" onsubmit="return confirm('Eliminare questo punteggio dalla classifica?');" style="display:inline;">
+                        <input type="hidden" name="delete_score_id" value="<?= (int)$row['id'] ?>" />
+                        <button type="submit" class="btn btn-red" style="padding:6px 10px; font-size:8px;">ELIMINA</button>
+                      </form>
+                    </td>
+                  </tr>
+                <?php endforeach; endif; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
+  </div>
 </body>
 </html>
