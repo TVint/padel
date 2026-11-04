@@ -1,4 +1,4 @@
-// js/app.js - REBRUNCH // Republic Sport Village - GBC Advergame Frontend Controller
+// js/app.js - REBRUNCH // Republic Sport Village - GBC Advergame Frontend & 3-Skin Switcher
 
 import { sound } from './game/audio.js';
 import { GBCInputController } from './game/touch.js';
@@ -26,7 +26,43 @@ async function trackAreaClick(areaClicked) {
 }
 
 // =========================================================
-// 2. LCD VIEW NAVIGATION
+// 2. GAME BOY 3-SKIN SWITCHER (CLASSICA / UOMO / DONNA)
+// =========================================================
+function applySkin(skinName) {
+  const validSkins = ['classic', 'uomo', 'donna'];
+  const chosen = validSkins.includes(skinName) ? skinName : 'classic';
+
+  document.body.setAttribute('data-skin', chosen);
+  const shell = document.getElementById('gbc-shell');
+  if (shell) shell.setAttribute('data-skin', chosen);
+
+  document.querySelectorAll('[data-set-skin]').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-set-skin') === chosen);
+  });
+
+  try {
+    localStorage.setItem('rebrunch_gbc_skin', chosen);
+  } catch (_) {}
+}
+
+function initSkinSwitcher() {
+  let saved = 'classic';
+  try {
+    saved = localStorage.getItem('rebrunch_gbc_skin') || 'classic';
+  } catch (_) {}
+  applySkin(saved);
+
+  document.querySelectorAll('[data-set-skin]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetSkin = btn.getAttribute('data-set-skin');
+      sound.btnClick();
+      applySkin(targetSkin);
+    });
+  });
+}
+
+// =========================================================
+// 3. LCD VIEW NAVIGATION
 // =========================================================
 function showView(viewId) {
   currentView = viewId;
@@ -71,89 +107,8 @@ function startPadelAdvergame() {
 }
 
 // =========================================================
-// 3. PIXEL-ART INTRO SCENE & ANIMATED DJ SCENE
+// 4. ANIMATED PIXEL-ART DJ SCENE (APERITIVO VIEW)
 // =========================================================
-function initIntroCanvas() {
-  const canvas = document.getElementById('intro-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  let frame = 0;
-
-  function drawIntro() {
-    frame++;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Sky & Sun
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(0, 0, 296, 78);
-    ctx.fillStyle = '#fde047';
-    ctx.fillRect(246, 10, 26, 26);
-
-    // Lawn
-    ctx.fillStyle = '#4ade80';
-    ctx.fillRect(0, 78, 296, 50);
-
-    // Mini Padel Court (Left)
-    ctx.fillStyle = '#0284c7';
-    ctx.fillRect(14, 52, 128, 62);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(14, 52, 128, 62);
-
-    // Net
-    ctx.fillStyle = '#e2e8f0';
-    ctx.fillRect(77, 52, 2, 62);
-
-    // Animated Padel Ball
-    const t = (Math.sin(frame * 0.07) + 1) / 2;
-    const bx = 28 + t * 96;
-    const by = 82 - Math.sin(t * Math.PI) * 20;
-    ctx.fillStyle = '#fde047';
-    ctx.fillRect(Math.round(bx), Math.round(by), 5, 5);
-
-    // Players
-    const bounce = frame % 24 < 12 ? 0 : 2;
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(24, 76 - bounce, 8, 14);
-    ctx.fillStyle = '#fde047';
-    ctx.fillRect(122, 78 + bounce, 8, 14);
-
-    // DJ Console & Brunch Table (Right)
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(166, 74, 114, 34);
-    ctx.strokeStyle = '#090d16';
-    ctx.strokeRect(166, 74, 114, 34);
-
-    // DJ Character
-    ctx.fillStyle = '#a855f7';
-    ctx.fillRect(212, 48 + bounce, 18, 26);
-    ctx.fillStyle = '#fde68a';
-    ctx.fillRect(215, 38 + bounce, 12, 11);
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(213, 39 + bounce, 3, 7);
-    ctx.fillRect(226, 39 + bounce, 3, 7);
-
-    // Turntables & Burger/Spritz icons
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(204, 68, 34, 6);
-    ctx.fillStyle = '#f97316';
-    ctx.fillRect(176, 64, 12, 10);
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(254, 62, 10, 12);
-
-    // Floating musical notes
-    ctx.fillStyle = '#090d16';
-    ctx.font = '8px "Press Start 2P", monospace';
-    const noteOffset = Math.floor(frame / 15) % 2 === 0 ? 0 : 4;
-    ctx.fillText('♪', 194, 42 - noteOffset);
-    ctx.fillText('♫', 242, 38 + noteOffset);
-
-    requestAnimationFrame(drawIntro);
-  }
-
-  drawIntro();
-}
-
 function initDjSceneCanvas() {
   const canvas = document.getElementById('dj-canvas');
   if (!canvas) return;
@@ -179,7 +134,7 @@ function initDjSceneCanvas() {
     ctx.stroke();
 
     // 8-Bit Spectrum Equalizer Bars in Background
-    const barColors = ['#22c55e', '#eab308', '#ef4444', '#38bdf8', '#a855f7'];
+    const barColors = ['#9ad932', '#f7c11e', '#ef4444', '#58b8e8', '#a855f7'];
     for (let i = 0; i < 16; i++) {
       const wave = Math.abs(Math.sin(tick * 0.11 + i * 0.7));
       const h = Math.round(10 + wave * 42);
@@ -207,13 +162,12 @@ function initDjSceneCanvas() {
     ctx.fillRect(djX + 11, djY + 7, 11, 6);
     ctx.fillRect(djX + 26, djY + 7, 11, 6);
     ctx.fillRect(djX + 22, djY + 9, 4, 2);
-    // Neon visor glint
-    ctx.fillStyle = '#38bdf8';
+    ctx.fillStyle = '#58b8e8';
     ctx.fillRect(djX + 13, djY + 8, 4, 2);
     ctx.fillRect(djX + 28, djY + 8, 4, 2);
 
     // Torso / Acid Jacket
-    ctx.fillStyle = '#facc15';
+    ctx.fillStyle = '#f7c11e';
     ctx.fillRect(djX + 4, djY + 23, 40, 28);
     ctx.fillStyle = '#090d16';
     ctx.fillRect(djX + 16, djY + 23, 16, 28);
@@ -227,37 +181,36 @@ function initDjSceneCanvas() {
     // DJ Booth & Twin Technics Turntables
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(28, 84, 224, 46);
-    ctx.strokeStyle = '#38bdf8';
+    ctx.strokeStyle = '#58b8e8';
     ctx.lineWidth = 3;
     ctx.strokeRect(28, 84, 224, 46);
 
-    // Left & Right Vinyl Platters
     [76, 204].forEach((cx, idx) => {
       ctx.fillStyle = '#090d16';
       ctx.fillRect(cx - 24, 76, 48, 9);
-      ctx.fillStyle = (tick + idx * 5) % 10 < 5 ? '#ef4444' : '#facc15';
+      ctx.fillStyle = (tick + idx * 5) % 10 < 5 ? '#ef4444' : '#f7c11e';
       ctx.fillRect(cx - 8, 78, 16, 4);
     });
 
     // Mixer Sliders
-    ctx.fillStyle = '#4ade80';
+    ctx.fillStyle = '#9ad932';
     ctx.fillRect(128, 78, 24, 7);
 
     // Booth Front Neon Sign
     ctx.fillStyle = '#090d16';
     ctx.fillRect(52, 95, 176, 24);
-    ctx.strokeStyle = '#facc15';
+    ctx.strokeStyle = '#f7c11e';
     ctx.lineWidth = 2;
     ctx.strokeRect(52, 95, 176, 24);
 
-    ctx.fillStyle = tick % 24 < 12 ? '#4ade80' : '#facc15';
+    ctx.fillStyle = tick % 24 < 12 ? '#9ad932' : '#f7c11e';
     ctx.font = '8px "Press Start 2P", monospace';
     ctx.fillText('REPUBLIC ACID DJ', 74, 111);
 
     // Floating 8-Bit Musical Notes
-    ctx.fillStyle = '#fde047';
+    ctx.fillStyle = '#f7c11e';
     ctx.fillText('♪', 48, 36 - (tick % 14));
-    ctx.fillStyle = '#38bdf8';
+    ctx.fillStyle = '#58b8e8';
     ctx.fillText('♫', 218, 40 - ((tick + 7) % 14));
 
     requestAnimationFrame(drawDj);
@@ -267,7 +220,7 @@ function initDjSceneCanvas() {
 }
 
 // =========================================================
-// 4. HARDWARE VOLUME KEYS (VolumeUp / VolumeDown) + OSD
+// 5. HARDWARE VOLUME KEYS (VolumeUp / VolumeDown) + OSD
 // =========================================================
 function showVolumeOsd(vol, isEasterEgg = false) {
   const osd = document.getElementById('volume-osd');
@@ -315,7 +268,7 @@ function bindHardwareVolumeKeys() {
 }
 
 // =========================================================
-// 5. SUPER PADEL DX 2V2 & ARCADE SCORE SUBMISSION
+// 6. SUPER PADEL DX 2V2 & ARCADE SCORE SUBMISSION
 // =========================================================
 function ensureGameStarted() {
   const canvas = document.getElementById('game-canvas');
@@ -404,7 +357,7 @@ function bindArcadeScoreForm() {
 }
 
 // =========================================================
-// 6. HALL OF FAME (LEADERBOARD) FETCHER
+// 7. HALL OF FAME (LEADERBOARD) FETCHER
 // =========================================================
 async function loadHallOfFame() {
   const matchesContainer = document.getElementById('hof-matches-list');
@@ -425,7 +378,7 @@ async function loadHallOfFame() {
           return `
             <div class="hof-item">
               <span>#${idx + 1} <strong>${escapeHtml(m.name)}</strong></span>
-              <span style="color:#fde047;">${Number(m.score)} PTS</span>
+              <span style="color:#f7c11e;">${Number(m.score)} PTS</span>
             </div>
           `;
         })
@@ -445,10 +398,10 @@ function escapeHtml(str) {
 }
 
 // =========================================================
-// 7. SHELL & UI BUTTON BINDINGS
+// 8. SHELL & UI BUTTON BINDINGS
 // =========================================================
 function bindUiControls() {
-  // Colored Pills & Back Buttons inside LCD
+  // Clickable Side Labels & Back Buttons
   document.querySelectorAll('[data-open-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetView = btn.getAttribute('data-open-view');
@@ -459,8 +412,8 @@ function bindUiControls() {
     });
   });
 
-  // Intro CTA ("PREMI IL TASTO GIOCA PER INIZIARE!")
-  document.getElementById('intro-play-cta')?.addEventListener('click', () => {
+  // Clicking the hero illustration on Intro starts the Padel game
+  document.querySelector('.poster-hero-art')?.addEventListener('click', () => {
     startPadelAdvergame();
   });
 
@@ -498,7 +451,7 @@ function bindUiControls() {
   const btnAudio = document.getElementById('btn-audio-toggle');
   btnAudio?.addEventListener('click', () => {
     const on = sound.toggleMute();
-    btnAudio.textContent = on ? '♪ SFX:ON' : '♪ SFX:OFF';
+    btnAudio.textContent = on ? '♪ ON' : '♪ OFF';
     if (on) sound.btnClick();
   });
 
@@ -508,8 +461,6 @@ function bindUiControls() {
   btnCrt?.addEventListener('click', () => {
     sound.btnClick();
     lcdScreen?.classList.toggle('scanlines');
-    const hasCrt = lcdScreen?.classList.contains('scanlines');
-    btnCrt.textContent = hasCrt ? 'CRT:ON' : 'CRT:OFF';
   });
 
   // Match Over Modal actions
@@ -537,7 +488,7 @@ function bindUiControls() {
 // BOOTSTRAP
 // =========================================================
 window.addEventListener('DOMContentLoaded', () => {
-  initIntroCanvas();
+  initSkinSwitcher();
   initDjSceneCanvas();
   bindHardwareVolumeKeys();
   bindArcadeScoreForm();

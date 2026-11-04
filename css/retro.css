@@ -1,31 +1,74 @@
-/* css/retro.css - Dandelion Yellow Game Boy Color Shell & Responsive Mobile Advergame UI */
+/* css/retro.css - REBRUNCH // Republic Sport Village - Reference Poster Style + 3 Skins (Classica / Uomo / Donna) */
 
 :root {
-  /* Dandelion Yellow GBC Shell Palette */
-  --shell-main: #f3be26;
-  --shell-light: #fde047;
-  --shell-dark: #c89008;
-  --shell-border: #1e1b18;
+  /* SKIN 1: CLASSICA (Exact Slate Blue-Grey from Attached Reference Poster) */
+  --shell-bg-top: #3e4760;
+  --shell-bg-main: #353d54;
+  --shell-bg-bot: #2b3246;
+  --shell-border: #111520;
+  --shell-bevel-light: #566280;
+  --shell-bevel-dark: #202636;
 
-  /* Dark Bezel Lens */
-  --lens-bg: #26262e;
-  --lens-border: #111115;
+  --lens-bg-top: #2b3247;
+  --lens-bg-bot: #1e2333;
+  --lens-border: #0c0f17;
 
-  /* Poster & Court Palette */
-  --poster-bg: #8fd3e8;
-  --poster-border: #1e293b;
-  --lcd-dark: #0f172a;
-  --lcd-green: #22c55e;
-  --lcd-red: #ef4444;
-  --lcd-yellow: #eab308;
+  --plate-bg: #374057;
+  --plate-border: #111520;
+  --plate-highlight: #505b78;
 
-  /* Colored Physical Buttons */
-  --btn-red: #dc2626;
-  --btn-red-dark: #7f1d1d;
-  --btn-green: #16a34a;
-  --btn-green-dark: #14532d;
-  --btn-yellow: #eab308;
-  --btn-yellow-dark: #713f12;
+  /* Retro Sage-Green LCD Screen from Reference Poster */
+  --lcd-sage-top: #538467;
+  --lcd-sage-bot: #477459;
+
+  /* Accent Colors from Reference Poster */
+  --rep-yellow: #f7c11e;
+  --rep-lime: #9ad932;
+  --rep-red: #e53935;
+  --rep-cyan: #58b8e8;
+}
+
+/* =========================================================
+   SKIN 2: UOMO (PEA GREEN + MASCULINE STICKERS)
+   ========================================================= */
+body[data-skin="uomo"],
+.gbc-shell[data-skin="uomo"] {
+  --shell-bg-top: #84cc16;
+  --shell-bg-main: #65a30d;
+  --shell-bg-bot: #4d7c0f;
+  --shell-border: #1a2e05;
+  --shell-bevel-light: #a3e635;
+  --shell-bevel-dark: #365314;
+
+  --lens-bg-top: #2ec40022;
+  --lens-bg-top: #263815;
+  --lens-bg-bot: #18240c;
+  --lens-border: #0c1405;
+
+  --plate-bg: #4d7c0f;
+  --plate-border: #1a2e05;
+  --plate-highlight: #84cc16;
+}
+
+/* =========================================================
+   SKIN 3: DONNA (SHOCKING PINK + GLITTER FEMININE STICKERS)
+   ========================================================= */
+body[data-skin="donna"],
+.gbc-shell[data-skin="donna"] {
+  --shell-bg-top: #ff2e93;
+  --shell-bg-main: #ec4899;
+  --shell-bg-bot: #be185d;
+  --shell-border: #4a0424;
+  --shell-bevel-light: #f9a8d4;
+  --shell-bevel-dark: #831843;
+
+  --lens-bg-top: #701a47;
+  --lens-bg-bot: #4a0d2c;
+  --lens-border: #290416;
+
+  --plate-bg: #db2777;
+  --plate-border: #500724;
+  --plate-highlight: #f472b6;
 }
 
 * {
@@ -37,13 +80,13 @@
 
 html, body {
   min-height: 100%;
-  background: radial-gradient(circle at center, #2b2347 0%, #0d0b14 75%, #050508 100%);
+  background: radial-gradient(circle at center, #1e2436 0%, #0d1019 80%, #06080d 100%);
   color: #f8fafc;
   font-family: 'Press Start 2P', monospace;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 12px 8px;
+  padding: 10px 8px;
   overflow-x: hidden;
   image-rendering: pixelated;
 }
@@ -99,171 +142,290 @@ html, body {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 470px;
+  max-width: 460px;
 }
 
 /* =========================================================
-   DANDELION YELLOW GAME BOY COLOR SHELL
+   GAME BOY SHELL (CLASSIC SLATE / UOMO PEA GREEN / DONNA PINK)
    ========================================================= */
 .gbc-shell {
   width: 100%;
-  max-width: 440px;
-  background: linear-gradient(155deg, var(--shell-light) 0%, var(--shell-main) 45%, var(--shell-dark) 100%);
-  border-radius: 24px 24px 58px 24px;
-  padding: 14px 18px 24px;
-  border: 5px solid var(--shell-border);
+  max-width: 438px;
+  background: linear-gradient(180deg, var(--shell-bg-top) 0%, var(--shell-bg-main) 50%, var(--shell-bg-bot) 100%);
+  border-radius: 14px;
+  padding: 10px 14px 14px;
+  border: 4px solid var(--shell-border);
   box-shadow:
-    inset 0 4px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -8px 16px rgba(120, 70, 0, 0.45),
-    0 20px 45px rgba(0, 0, 0, 0.8),
+    inset 0 3px 0 var(--shell-bevel-light),
+    inset 0 -4px 0 var(--shell-bevel-dark),
+    0 20px 45px rgba(0, 0, 0, 0.85),
     0 6px 0 #000;
   position: relative;
   user-select: none;
+  overflow: hidden;
+  transition: background 0.25s ease, border-color 0.25s ease;
 }
 
-.shell-top-groove {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 7px;
-  color: rgba(60, 40, 0, 0.75);
-  padding: 0 8px 8px;
-  border-bottom: 3px groove rgba(255, 255, 255, 0.45);
-  margin-bottom: 10px;
+/* Shimmer Glitter Overlay for DONNA Skin */
+.gbc-shell[data-skin="donna"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.7) 0px, transparent 2px),
+    radial-gradient(circle at 82% 15%, rgba(255, 240, 250, 0.8) 0px, transparent 2.5px),
+    radial-gradient(circle at 12% 68%, rgba(255, 255, 255, 0.75) 0px, transparent 2px),
+    radial-gradient(circle at 88% 72%, rgba(254, 240, 138, 0.8) 0px, transparent 2.5px),
+    radial-gradient(circle at 52% 52%, rgba(255, 255, 255, 0.65) 0px, transparent 2px);
+  pointer-events: none;
+  z-index: 1;
+  animation: glitterTwinkle 2.2s infinite alternate;
+}
+
+@keyframes glitterTwinkle {
+  0% { opacity: 0.55; }
+  100% { opacity: 1; }
+}
+
+/* 4 Pixel Corner Screws on Outer Shell */
+.shell-screw {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #64748b;
+  border: 2px solid #0f172a;
+  box-shadow: inset 1px 1px 0 #cbd5e1;
+  z-index: 5;
+}
+.shell-screw::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 4px;
+  height: 2px;
+  background: #0f172a;
+}
+.screw-tl { top: 6px; left: 6px; }
+.screw-tr { top: 6px; right: 6px; }
+.screw-bl { bottom: 6px; left: 6px; }
+.screw-br { bottom: 6px; right: 6px; }
+
+/* =========================================================
+   SKIN STICKERS (UOMO & DONNA)
+   ========================================================= */
+.skin-stickers {
+  display: none;
+  pointer-events: none;
+}
+
+.gbc-shell[data-skin="uomo"] .stickers-uomo {
+  display: block;
+}
+
+.gbc-shell[data-skin="donna"] .stickers-donna {
+  display: block;
+}
+
+.sticker {
+  position: absolute;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  padding: 4px 6px;
+  border: 2px solid #ffffff;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.75);
+  z-index: 25;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+/* Masculine Stickers (Pea Green Skin) */
+.st-u1 {
+  top: 445px;
+  left: 10px;
+  background: #dc2626;
+  color: #fde047;
+  transform: rotate(-6deg);
+}
+.st-u2 {
+  top: 445px;
+  right: 10px;
+  background: #1e293b;
+  color: #facc15;
+  transform: rotate(6deg);
+}
+.st-u3 {
+  bottom: 96px;
+  left: 8px;
+  background: #f97316;
+  color: #090d16;
+  transform: rotate(-5deg);
+}
+.st-u4 {
+  bottom: 96px;
+  right: 8px;
+  background: #090d16;
+  color: #4ade80;
+  transform: rotate(5deg);
+}
+
+/* Feminine Glitter Stickers (Shocking Pink Skin) */
+.glitter-badge {
+  background: linear-gradient(135deg, #fdf2f8 0%, #f472b6 45%, #fde047 100%);
+  color: #831843;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.85), 2px 2px 0 #500724;
+}
+.st-d1 {
+  top: 445px;
+  left: 10px;
+  transform: rotate(-6deg);
+}
+.st-d2 {
+  top: 445px;
+  right: 10px;
+  background: linear-gradient(135deg, #fef08a 0%, #f472b6 60%, #c084fc 100%);
+  transform: rotate(6deg);
+}
+.st-d3 {
+  bottom: 96px;
+  left: 8px;
+  background: linear-gradient(135deg, #fbcfe8 0%, #e879f9 55%, #fef08a 100%);
+  transform: rotate(-5deg);
+}
+.st-d4 {
+  bottom: 96px;
+  right: 8px;
+  background: linear-gradient(135deg, #bae6fd 0%, #f472b6 60%, #ffffff 100%);
+  transform: rotate(5deg);
 }
 
 /* =========================================================
-   DARK SCREEN LENS BEZEL
+   SLIM NON-INVASIVE SKIN SWITCHER BAR (REPLACES BATTERY BAND)
    ========================================================= */
-.gbc-lens {
-  background: linear-gradient(180deg, #2e2f38 0%, var(--lens-bg) 100%);
-  border: 4px solid var(--lens-border);
-  border-radius: 14px 14px 34px 14px;
-  padding: 10px 12px 12px;
-  box-shadow:
-    inset 0 3px 8px rgba(0, 0, 0, 0.85),
-    0 3px 0 rgba(255, 255, 255, 0.35);
+.slim-skin-bar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  background: rgba(12, 15, 23, 0.78);
+  border: 2px solid var(--shell-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin: 0 8px 8px;
 }
 
-.lens-top-row {
+.skin-tabs {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 3px;
+  flex-wrap: nowrap;
 }
 
-.lens-stripes {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 22px;
-}
-.stripe-red { height: 2px; background: #ef4444; display: block; }
-.stripe-blue { height: 2px; background: #3b82f6; display: block; }
-
-.lens-title {
-  font-size: 6px;
+.skin-lbl {
+  font-size: 5.5px;
   color: #cbd5e1;
-  letter-spacing: 0.4px;
-  flex: 1;
-  text-align: center;
+  margin-right: 2px;
 }
 
-.lens-actions {
+.skin-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5.5px;
+  padding: 4px 5px;
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 2px solid #334155;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s;
+}
+
+.skin-btn.active {
+  background: var(--rep-yellow);
+  color: #090d16;
+  border-color: #ffffff;
+  box-shadow: 0 2px 0 #000;
+}
+
+.skin-btn:active {
+  transform: translateY(1px);
+}
+
+.slim-utils {
   display: flex;
-  gap: 4px;
+  gap: 3px;
 }
 
 .mini-bezel-btn {
   background: #0f172a;
-  color: #fde047;
-  border: 1px solid #64748b;
+  color: var(--rep-yellow);
+  border: 1px solid #475569;
   font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
-  padding: 3px 5px;
+  font-size: 5.5px;
+  padding: 4px 5px;
   border-radius: 3px;
   cursor: pointer;
 }
-.mini-bezel-btn:active {
-  transform: translateY(1px);
-}
 
-.lens-body {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* BATTERY LED */
-.battery-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  width: 24px;
-}
-
-.power-led {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #ef4444;
-  border: 2px solid #450a0a;
-  box-shadow: 0 0 8px #ef4444, 0 0 14px #f87171;
-  animation: ledPulse 2.4s infinite ease-in-out;
-}
-
-@keyframes ledPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.65; }
-}
-
-.battery-label {
-  font-size: 5px;
-  color: #94a3b8;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  letter-spacing: 1px;
+/* =========================================================
+   METALLIC BEVELED SCREEN FRAME (MATCHING REFERENCE)
+   ========================================================= */
+.gbc-lens {
+  position: relative;
+  z-index: 5;
+  background: linear-gradient(180deg, var(--lens-bg-top) 0%, var(--lens-bg-bot) 100%);
+  border: 4px solid var(--lens-border);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.55),
+    0 3px 0 rgba(255, 255, 255, 0.14);
 }
 
 /* =========================================================
-   CENTRAL LCD VIEWPORT
+   CENTRAL SAGE-GREEN RETRO LCD VIEWPORT (FULL WIDTH)
    ========================================================= */
 .lcd-screen {
-  flex: 1;
-  height: 390px;
-  background: var(--poster-bg);
-  border: 4px solid #090d16;
-  border-radius: 4px;
-  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.35);
+  width: 100%;
+  height: 392px;
+  background: linear-gradient(180deg, var(--lcd-sage-top) 0%, var(--lcd-sage-bot) 100%);
+  border: 4px solid #0b0e14;
+  border-radius: 10px;
+  box-shadow:
+    inset 0 4px 10px rgba(0, 0, 0, 0.45),
+    0 0 0 2px #1e293b;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: #1e293b #bae6fd;
+  scrollbar-color: #1e293b #477459;
 }
 
 .lcd-screen::-webkit-scrollbar {
   width: 5px;
 }
 .lcd-screen::-webkit-scrollbar-track {
-  background: #bae6fd;
+  background: #477459;
 }
 .lcd-screen::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #111827;
 }
 
-/* Optional CRT Scanlines */
+/* Horizontal Scanlines matching Reference Poster */
 .lcd-screen.scanlines::after {
   content: "";
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0) 0px,
-    rgba(0, 0, 0, 0) 2px,
-    rgba(0, 0, 0, 0.11) 3px
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 2px,
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 4px
   );
   pointer-events: none;
   z-index: 30;
@@ -276,8 +438,8 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
   background: #0f172a;
-  border: 3px solid #facc15;
-  color: #facc15;
+  border: 3px solid var(--rep-yellow);
+  color: var(--rep-yellow);
   padding: 6px 10px;
   font-size: 7px;
   text-align: center;
@@ -307,108 +469,99 @@ html, body {
 }
 
 /* =========================================================
-   VIEW 1: REBRUNCH POSTER INTRO SCREEN
+   VIEW 1: REFERENCE POSTER INTRO SCREEN
    ========================================================= */
 .poster-screen {
-  padding: 8px;
+  padding: 6px 8px 8px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: space-between;
   min-height: 100%;
-  background: linear-gradient(180deg, #7dd3fc 0%, #bae6fd 55%, #86efac 100%);
-  color: #0f172a;
-}
-
-.poster-header-box {
-  background: #fef9c3;
-  border: 3px solid #0f172a;
-  box-shadow: 3px 3px 0 #0f172a;
-  padding: 7px 6px;
   text-align: center;
 }
 
-.poster-title {
-  font-size: 19px;
-  color: #0f172a;
+/* Republic Sport Village Logo matching Reference */
+.republic-brand {
+  margin-top: 2px;
+  line-height: 1;
+}
+
+.republic-word {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 900;
+  font-size: 31px;
+  color: var(--rep-yellow);
+  letter-spacing: 0.5px;
+  text-shadow:
+    0 3px 0 #101814,
+    2px 3px 0 #101814,
+    -1px -1px 0 #101814;
+}
+
+.republic-sub {
+  font-family: 'Playball', cursive, Georgia, serif;
+  font-size: 15px;
+  color: #b7db35;
+  margin-top: -2px;
+  text-shadow: 1px 2px 0 #101814;
+}
+
+/* DOMENICA 29 NOVEMBRE dalle ore 10:00 alle 14:30 */
+.poster-date-block {
+  margin: 6px 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.date-dow {
+  font-size: 21px;
+  color: var(--rep-yellow);
+  letter-spacing: 2px;
+  text-shadow: 2px 3px 0 #101814;
+}
+
+.date-day-month {
+  font-size: 18px;
   letter-spacing: 1px;
-  text-shadow: 2px 2px 0 #facc15;
+  text-shadow: 2px 3px 0 #101814;
 }
 
-.poster-sub {
-  font-size: 8px;
-  color: #1e293b;
-  margin-top: 3px;
+.day-num {
+  color: var(--rep-yellow);
+  margin-right: 4px;
 }
 
-.poster-scene {
-  margin: 6px 0;
-  border: 3px solid #0f172a;
-  background: #38bdf8;
-  box-shadow: 3px 3px 0 #0f172a;
-  line-height: 0;
+.month-name {
+  color: var(--rep-lime);
 }
 
-#intro-canvas {
+.date-hours {
+  font-size: 8.5px;
+  color: var(--rep-yellow);
+  letter-spacing: 0.4px;
+  text-shadow: 1px 2px 0 #101814;
+  margin-top: 1px;
+}
+
+/* Transparent Pixel Art Illustration + REBRUNCH + Eat. Play. Repeat. */
+.poster-hero-art {
   width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: auto;
+}
+
+.rebrunch-hero-img {
+  width: 88%;
+  max-width: 316px;
   height: auto;
   display: block;
   image-rendering: pixelated;
-}
-
-.poster-details {
-  background: rgba(254, 249, 195, 0.94);
-  border: 3px solid #0f172a;
-  box-shadow: 3px 3px 0 #0f172a;
-  padding: 8px 6px;
-  text-align: center;
-}
-
-.poster-date {
-  font-size: 12px;
-  color: #b91c1c;
-  margin-bottom: 4px;
-  text-shadow: 1px 1px 0 #fff;
-}
-
-.poster-location {
-  font-size: 7px;
-  color: #1e293b;
-  line-height: 1.5;
-  margin-bottom: 7px;
-}
-
-.poster-pills {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.pill {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 6.5px;
-  padding: 5px 6px;
-  border: 2px solid #0f172a;
-  box-shadow: 2px 2px 0 #0f172a;
-  cursor: pointer;
-}
-.pill:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 #0f172a;
-}
-.pill-green { background: #4ade80; color: #052e16; }
-.pill-red { background: #f87171; color: #450a0a; }
-.pill-yellow { background: #fde047; color: #422006; }
-
-.poster-start-cta {
-  font-size: 7.5px;
-  color: #ffffff;
-  background: #dc2626;
-  padding: 7px 6px;
-  border: 2px solid #0f172a;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 #0f172a;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35));
 }
 
 .blink {
@@ -432,32 +585,32 @@ html, body {
 }
 
 .lcd-card-view.theme-green {
-  background: linear-gradient(180deg, #052e16 0%, #14532d 100%);
+  background: linear-gradient(180deg, #1d4d35 0%, #113022 100%);
 }
 .lcd-card-view.theme-red {
-  background: linear-gradient(180deg, #1e0510 0%, #4c0519 60%, #090a10 100%);
+  background: linear-gradient(180deg, #2b0918 0%, #4c0519 60%, #111520 100%);
 }
 .lcd-card-view.theme-yellow {
-  background: linear-gradient(180deg, #422006 0%, #713f12 100%);
+  background: linear-gradient(180deg, #3b250b 0%, #1f1710 100%);
 }
 
 .card-view-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #090d16;
-  border: 2px solid #facc15;
+  background: #111520;
+  border: 2px solid var(--rep-yellow);
   padding: 6px 8px;
   font-size: 8px;
-  color: #fde047;
-  margin-bottom: 8px;
+  color: var(--rep-yellow);
+  margin-bottom: 6px;
 }
 
 .lcd-back-btn {
   font-family: 'Press Start 2P', monospace;
   font-size: 6.5px;
   padding: 4px 6px;
-  background: #ef4444;
+  background: var(--rep-red);
   color: #fff;
   border: 2px solid #fff;
   cursor: pointer;
@@ -476,8 +629,8 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(9, 13, 22, 0.85);
-  border: 2px solid #4ade80;
+  background: rgba(17, 21, 32, 0.88);
+  border: 2px solid var(--rep-lime);
   padding: 4px 8px;
   font-size: 7.5px;
   color: #f0fdf4;
@@ -488,28 +641,27 @@ html, body {
   font-size: 11px;
   width: 18px;
   text-align: center;
-  filter: contrast(1.25);
 }
 
 .card-view-footer {
   margin-top: 5px;
   font-size: 6px;
   text-align: center;
-  color: #bbf7d0;
+  color: var(--rep-yellow);
   padding: 5px;
   background: rgba(0, 0, 0, 0.45);
-  border: 1px dashed #4ade80;
+  border: 1px dashed var(--rep-lime);
 }
 
 /* RED VIEW: APERITIVO DJ SET + Y2K MARQUEE */
 .dj-set-banner {
-  background: #ef4444;
+  background: var(--rep-red);
   color: #ffffff;
-  border: 2px solid #fde047;
-  padding: 6px;
+  border: 2px solid var(--rep-yellow);
+  padding: 5px;
   text-align: center;
-  font-size: 8.5px;
-  margin-bottom: 6px;
+  font-size: 8px;
+  margin-bottom: 5px;
   box-shadow: 2px 2px 0 #000;
 }
 
@@ -518,7 +670,7 @@ html, body {
   background: #090a10;
   box-shadow: 3px 3px 0 #000;
   line-height: 0;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 #dj-canvas {
@@ -530,15 +682,15 @@ html, body {
 
 .y2k-marquee-box {
   background: #000000;
-  border: 2px solid #38bdf8;
-  padding: 6px 4px;
+  border: 2px solid var(--rep-cyan);
+  padding: 5px 4px;
   box-shadow: 2px 2px 0 #000;
 }
 
 .y2k-marquee {
   font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  color: #fde047;
+  font-size: 7.5px;
+  color: var(--rep-yellow);
   letter-spacing: 1px;
 }
 
@@ -551,15 +703,15 @@ html, body {
   align-items: center;
   text-align: center;
   gap: 12px;
-  background: rgba(9, 13, 22, 0.78);
-  border: 3px solid #fde047;
+  background: rgba(17, 21, 32, 0.85);
+  border: 3px solid var(--rep-yellow);
   padding: 14px 10px;
   box-shadow: 3px 3px 0 #000;
 }
 
 .torneo-trophy {
   font-size: 9px;
-  color: #fde047;
+  color: var(--rep-yellow);
 }
 
 .torneo-copy {
@@ -568,7 +720,7 @@ html, body {
   color: #fef9c3;
 }
 .torneo-copy strong {
-  color: #4ade80;
+  color: var(--rep-lime);
 }
 
 .wa-big-btn {
@@ -585,10 +737,6 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-}
-.wa-big-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 2px 0 #000;
 }
 
 .wa-submenu {
@@ -613,16 +761,10 @@ html, body {
   font-size: 7.5px;
   text-decoration: none;
   box-shadow: 2px 2px 0 #000;
-  transition: background 0.15s;
-}
-.wa-contact-link:hover,
-.wa-contact-link:active {
-  background: #16a34a;
-  color: #ffffff;
 }
 
 /* =========================================================
-   VIEW 5: SUPER PADEL DX 2V2 + HALL OF FAME
+   VIEW 5: SUPER PADEL DX 2V2 + C64 CROWD + HALL OF FAME
    ========================================================= */
 #view-game {
   background: #0f172a;
@@ -632,10 +774,10 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #090d16;
+  background: #111520;
   color: #f8fafc;
   padding: 5px 6px;
-  border-bottom: 2px solid #38bdf8;
+  border-bottom: 2px solid var(--rep-yellow);
   font-size: 7px;
 }
 
@@ -644,27 +786,35 @@ html, body {
   align-items: center;
   gap: 4px;
 }
-.hud-lbl { color: #94a3b8; font-size: 6px; }
-.hud-pts { color: #fde047; font-size: 10px; }
-.hud-gms { color: #38bdf8; font-size: 6px; }
+.hud-lbl { color: #cbd5e1; font-size: 6px; }
+.hud-pts { color: var(--rep-yellow); font-size: 10px; }
+.hud-gms { color: var(--rep-lime); font-size: 6px; }
 
 .hud-center {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 .shot-badge {
   font-size: 6px;
   color: #4ade80;
-  margin-bottom: 2px;
 }
-.hud-sub {
+.hud-home-link {
+  font-family: 'Press Start 2P', monospace;
   font-size: 5px;
-  color: #cbd5e1;
+  padding: 2px 4px;
+  background: #334155;
+  color: #f8fafc;
+  border: 1px solid #94a3b8;
+  cursor: pointer;
 }
 
 .canvas-holder {
   position: relative;
   width: 100%;
-  background: #0284c7;
+  background: #1e293b;
   line-height: 0;
 }
 
@@ -689,7 +839,7 @@ html, body {
 
 .modal-box {
   background: #1e293b;
-  border: 3px solid #fde047;
+  border: 3px solid var(--rep-yellow);
   padding: 12px 10px;
   text-align: center;
   color: #fff;
@@ -699,13 +849,13 @@ html, body {
 
 .modal-box h4 {
   font-size: 10px;
-  color: #fde047;
+  color: var(--rep-yellow);
   margin-bottom: 6px;
 }
 
 .modal-box p {
   font-size: 8px;
-  color: #38bdf8;
+  color: var(--rep-cyan);
   margin-bottom: 10px;
 }
 
@@ -737,8 +887,8 @@ html, body {
   text-transform: uppercase;
   text-align: center;
   background: #16192b;
-  color: #fde047;
-  border: 2px solid #38bdf8;
+  color: var(--rep-yellow);
+  border: 2px solid var(--rep-cyan);
 }
 
 .arcade-save-feedback {
@@ -767,15 +917,15 @@ html, body {
   color: #052e16;
 }
 .lcd-btn-secondary {
-  background: #38bdf8;
+  background: var(--rep-cyan);
   color: #082f49;
 }
 
 .game-controls-hint {
   display: flex;
   justify-content: space-between;
-  background: #1e293b;
-  color: #fde047;
+  background: #111520;
+  color: var(--rep-yellow);
   font-size: 5.5px;
   padding: 5px 6px;
   border-top: 2px solid #090d16;
@@ -794,14 +944,14 @@ html, body {
   justify-content: space-between;
   align-items: center;
   font-size: 7.5px;
-  color: #fde047;
+  color: var(--rep-yellow);
   margin-bottom: 6px;
 }
 
 .hof-refresh {
   background: #1e293b;
-  color: #38bdf8;
-  border: 1px solid #38bdf8;
+  color: var(--rep-cyan);
+  border: 1px solid var(--rep-cyan);
   font-family: 'Press Start 2P', monospace;
   font-size: 7px;
   padding: 2px 5px;
@@ -812,13 +962,13 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 120px;
+  max-height: 115px;
   overflow-y: auto;
 }
 
 .hof-item {
   background: #1e293b;
-  border-left: 3px solid #22c55e;
+  border-left: 3px solid var(--rep-lime);
   padding: 5px 6px;
   font-size: 6.5px;
   display: flex;
@@ -833,54 +983,82 @@ html, body {
   padding: 8px;
 }
 
-/* LENS BOTTOM LOGO */
-.lens-bottom-logo {
-  text-align: center;
-  margin-top: 7px;
-  font-size: 10px;
-  letter-spacing: 1px;
+/* =========================================================
+   TWIN CENTER LEDS UNDER SCREEN (EXACT MATCH TO POSTER)
+   ========================================================= */
+.center-leds-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 7px 0;
+  position: relative;
+  z-index: 5;
 }
-.gbc-word {
-  color: #e2e8f0;
-  font-style: italic;
-  margin-right: 4px;
-}
-.color-word b { font-weight: bold; }
-.c-r { color: #ef4444; }
-.c-o { color: #f97316; }
-.c-g { color: #22c55e; }
-.c-b { color: #3b82f6; }
-.c-p { color: #a855f7; }
 
-.nintendo-emboss {
-  text-align: center;
-  margin: 8px auto 4px;
-  font-size: 7px;
-  color: rgba(80, 50, 0, 0.72);
-  letter-spacing: 1.5px;
-  border: 2px groove rgba(255, 255, 255, 0.45);
-  display: table;
-  padding: 3px 10px;
-  border-radius: 10px;
+.px-led {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #0b0e14;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.led-red {
+  background: #ef4444;
+  box-shadow: inset 1px 1px 0 #fca5a5, 0 0 6px rgba(239, 68, 68, 0.75);
+}
+
+.led-green {
+  background: #4ade80;
+  box-shadow: inset 1px 1px 0 #bbf7d0, 0 0 6px rgba(74, 222, 128, 0.75);
 }
 
 /* =========================================================
-   PHYSICAL CONTROLS DECK (40% LARGER ERGONOMIC MOBILE THUMBS)
+   TWO SCREWED CONTROL PANELS (EXACT MATCH TO POSTER)
    ========================================================= */
 .gbc-controls-deck {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 4px 6px;
-  margin-top: 2px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  position: relative;
+  z-index: 5;
 }
 
-/* 40% Larger Ergonomic D-Pad (144x144px) */
-.dpad-wrapper {
-  width: 144px;
-  height: 144px;
+.control-plate {
   position: relative;
-  flex-shrink: 0;
+  background: var(--plate-bg);
+  border: 3px solid var(--plate-border);
+  border-radius: 8px;
+  padding: 10px 8px;
+  box-shadow:
+    inset 0 2px 0 var(--plate-highlight),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+    0 3px 0 #0b0e14;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 142px;
+}
+
+.plate-screw {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+  border: 2px solid #0b0e14;
+}
+.ps-tl { top: 5px; left: 5px; }
+.ps-tr { top: 5px; right: 5px; }
+.ps-bl { bottom: 5px; left: 5px; }
+.ps-br { bottom: 5px; right: 5px; }
+
+/* LEFT PLATE: YELLOW PIXEL D-PAD + "live Dj Set" */
+.dpad-wrapper {
+  width: 126px;
+  height: 120px;
+  position: relative;
 }
 
 .dpad-cross {
@@ -891,194 +1069,220 @@ html, body {
 
 .dpad-btn {
   position: absolute;
-  width: 48px;
-  height: 48px;
-  background: #27272a;
-  color: #a1a1aa;
-  border: 3px solid #09090b;
-  font-size: 14px;
+  width: 38px;
+  height: 34px;
+  background: linear-gradient(180deg, #fde047 0%, var(--rep-yellow) 70%, #ca8a04 100%);
+  color: #111520;
+  border: 3px solid #0b0e14;
+  border-radius: 5px;
+  font-size: 13px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: 0 4px 0 #09090b;
+  box-shadow: 0 3px 0 #0b0e14;
   touch-action: manipulation;
 }
 
 .dpad-btn:active,
 .dpad-btn.pressed {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 #09090b;
-  background: #3f3f46;
-  color: #fde047;
+  box-shadow: 0 1px 0 #0b0e14;
+  background: #facc15;
 }
 
-.dpad-up    { top: 0; left: 48px; border-radius: 8px 8px 0 0; }
-.dpad-down  { bottom: 0; left: 48px; border-radius: 0 0 8px 8px; }
-.dpad-left  { top: 48px; left: 0; border-radius: 8px 0 0 8px; }
-.dpad-right { top: 48px; right: 0; border-radius: 0 8px 8px 0; }
+.dpad-up    { top: 0; left: 44px; }
+.dpad-down  { bottom: 0; left: 44px; }
+.dpad-left  { top: 43px; left: 0; width: 34px; height: 34px; }
+.dpad-right { top: 43px; right: 0; width: 34px; height: 34px; }
 
-.dpad-center {
+.dpad-center-label {
   position: absolute;
-  top: 48px;
-  left: 48px;
-  width: 48px;
-  height: 48px;
-  background: #27272a;
-  z-index: 2;
-}
-.dpad-center::after {
-  content: "";
-  position: absolute;
-  inset: 9px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #18181b 20%, #27272a 100%);
-}
-
-/* 40% Larger 3 Colored Action Buttons Cluster (62px diameter buttons) */
-.color-buttons-cluster {
-  position: relative;
-  width: 176px;
-  height: 148px;
-  flex-shrink: 0;
-}
-
-.color-btn-slot {
-  position: absolute;
+  top: 40px;
+  left: 35px;
+  width: 56px;
+  height: 40px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 3px;
+  text-align: center;
+  pointer-events: none;
 }
 
-/* Ergonomic thumb arc on right edge */
-.slot-red {
-  top: 0px;
-  right: 4px;
+.live-word {
+  font-size: 7.5px;
+  color: var(--rep-lime);
+  text-shadow: 1px 2px 0 #0b0e14;
+  margin-bottom: 2px;
 }
-.slot-green {
-  top: 28px;
-  left: 4px;
+
+.djset-word {
+  font-size: 7.5px;
+  color: var(--rep-yellow);
+  text-shadow: 1px 2px 0 #0b0e14;
 }
-.slot-yellow {
-  bottom: 0px;
-  right: 40px;
+
+/* RIGHT PLATE: 3 PIXEL-ART COLORED BUTTONS + LABELS */
+.color-buttons-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 2px 6px 2px 10px;
+}
+
+.color-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
 
 .round-btn {
-  width: 62px;
-  height: 62px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: 3px solid #111827;
+  border: 3px solid #0b0e14;
   cursor: pointer;
+  flex-shrink: 0;
   box-shadow:
-    inset 0 4px 5px rgba(255, 255, 255, 0.42),
-    0 5px 0 #111827,
-    0 7px 12px rgba(0, 0, 0, 0.45);
+    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
+    0 3px 0 #0b0e14;
   transition: transform 0.06s;
   touch-action: manipulation;
 }
 
 .round-btn:active,
 .round-btn.pressed {
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 2px 3px rgba(0, 0, 0, 0.4),
-    0 2px 0 #111827;
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0b0e14;
 }
 
-.btn-red {
-  background: radial-gradient(circle at 35% 30%, #f87171, var(--btn-red) 65%, var(--btn-red-dark));
-}
 .btn-green {
-  background: radial-gradient(circle at 35% 30%, #4ade80, var(--btn-green) 65%, var(--btn-green-dark));
+  background: radial-gradient(circle at 35% 30%, #a3e635, #65a30d 70%, #365314);
+}
+.btn-red {
+  background: radial-gradient(circle at 35% 30%, #f87171, #dc2626 70%, #7f1d1d);
 }
 .btn-yellow {
-  background: radial-gradient(circle at 35% 30%, #fef08a, var(--btn-yellow) 65%, var(--btn-yellow-dark));
+  background: radial-gradient(circle at 35% 30%, #fef08a, #f59e0b 70%, #78350f);
 }
 
-.btn-caption {
-  font-size: 6px;
-  color: #1e1b18;
-  font-weight: bold;
-  letter-spacing: 0.4px;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+.btn-side-label {
+  font-size: 8.5px;
+  cursor: pointer;
+  text-shadow: 1px 2px 0 #0b0e14;
+  letter-spacing: 0.3px;
 }
+
+.lbl-green  { color: var(--rep-lime); }
+.lbl-red    { color: var(--rep-red); }
+.lbl-yellow { color: var(--rep-yellow); }
 
 /* =========================================================
-   SINGLE LARGE HORIZONTAL RED/GREY "GIOCA" BUTTON
+   LOWER POSTER TEXT, SPEAKER SLOTS & GIOCA BUTTON
    ========================================================= */
-.gbc-bottom-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-  padding: 0 6px;
+.open-invite-line {
+  position: relative;
+  z-index: 5;
+  text-align: center;
+  font-size: 7.3px;
+  color: var(--rep-yellow);
+  text-shadow: 1px 2px 0 #0b0e14;
+  margin: 10px 0 8px;
+  letter-spacing: 0.2px;
 }
 
-.play-button-deck {
-  flex: 1;
+.gbc-bottom-row {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 10px;
+  align-items: center;
+}
+
+/* 3 Horizontal Dark Recessed Speaker Slots matching Reference */
+.horiz-speaker-grille {
   display: flex;
-  justify-content: center;
-  padding-left: 28px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.horiz-speaker-grille span {
+  display: block;
+  width: 100%;
+  height: 9px;
+  background: #171c28;
+  border: 2px solid #0b0e14;
+  border-radius: 2px;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.85), 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.bottom-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
 }
 
 .btn-gioca-main {
-  width: 195px;
-  height: 46px;
-  border-radius: 12px;
+  width: 100%;
+  height: 34px;
+  border-radius: 6px;
   background: linear-gradient(180deg, #ef4444 0%, #b91c1c 65%, #374151 100%);
-  border: 4px solid #18181b;
+  border: 3px solid #0b0e14;
   color: #ffffff;
   font-family: 'Press Start 2P', monospace;
-  font-size: 12px;
-  letter-spacing: 1.5px;
+  font-size: 9.5px;
+  letter-spacing: 1px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   box-shadow:
-    inset 0 3px 0 rgba(255, 255, 255, 0.45),
-    0 5px 0 #09090b,
-    0 8px 14px rgba(0, 0, 0, 0.45);
+    inset 0 2px 0 rgba(255, 255, 255, 0.45),
+    0 3px 0 #0b0e14;
   touch-action: manipulation;
 }
 
 .btn-gioca-main:active,
 .btn-gioca-main.pressed {
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 2px 3px rgba(0, 0, 0, 0.5),
-    0 2px 0 #09090b;
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0b0e14;
 }
 
 .gioca-led {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #fde047;
-  box-shadow: 0 0 6px #fde047;
+  background: var(--rep-yellow);
+  box-shadow: 0 0 5px var(--rep-yellow);
 }
 
-/* Speaker Slots */
-.speaker-grille {
-  display: flex;
-  gap: 5px;
-  transform: rotate(-25deg);
-  padding-right: 6px;
+.club-address {
+  font-size: 6px;
+  line-height: 1.5;
+  color: var(--rep-lime);
+  text-shadow: 1px 1px 0 #0b0e14;
 }
-.speaker-grille span {
-  width: 4px;
-  height: 28px;
-  background: #27272a;
-  border-radius: 3px;
-  box-shadow: inset 0 1px 2px #000;
+
+.shell-footer-note {
+  position: relative;
+  z-index: 5;
+  text-align: center;
+  font-size: 7px;
+  color: var(--rep-red);
+  text-shadow: 1px 1px 0 #0b0e14;
+  letter-spacing: 1px;
+  margin-top: 8px;
 }
 
 /* Page Footer */
 .page-footer {
-  margin-top: 10px;
+  margin-top: 8px;
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -1088,7 +1292,7 @@ html, body {
   padding: 0 6px;
 }
 .admin-link {
-  color: #fde047;
+  color: var(--rep-yellow);
   text-decoration: none;
 }
 
@@ -1101,7 +1305,7 @@ html, body {
     margin: 0;
     width: 100vw;
     height: 100dvh;
-    background: var(--shell-main);
+    background: var(--shell-bg-main);
     overflow-x: hidden;
   }
 
@@ -1118,18 +1322,14 @@ html, body {
     border-radius: 0;
     border: none;
     box-shadow: none;
-    padding: 10px 12px 18px;
+    padding: 8px 12px 14px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
   }
 
   .lcd-screen {
-    height: 365px;
-  }
-
-  .gbc-controls-deck {
-    padding: 10px 2px 6px;
+    height: 375px;
   }
 
   .page-footer {

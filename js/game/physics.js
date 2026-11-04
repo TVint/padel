@@ -1,17 +1,17 @@
-// js/game/physics.js - 2.5D Padel Ball Physics (x, y, z), Linear Charge Interpolation & Landing Predictor
+// js/game/physics.js - 2.5D Padel Ball Physics (x, y, z), Wall Rebound Tracking & Linear Charge Interpolation
 
 import { sound } from './audio.js';
 
 export const COURT = {
   WIDTH: 320,
-  HEIGHT: 256,
-  LEFT: 36,
-  RIGHT: 284,
-  TOP: 24,
-  BOTTOM: 232,
-  NET_Y: 128,
-  SERVICE_TOP: 68,
-  SERVICE_BOTTOM: 188,
+  HEIGHT: 264,
+  LEFT: 38,
+  RIGHT: 282,
+  TOP: 50,
+  BOTTOM: 246,
+  NET_Y: 148,
+  SERVICE_TOP: 92,
+  SERVICE_BOTTOM: 204,
 };
 
 /**
@@ -24,7 +24,7 @@ export function computeChargedShotVelocity({
   charge = 0,
   dirY = -1,
   aimX = 0,
-  playerY = 195,
+  playerY = 212,
   ballZ = 10,
   isLob = false,
 }) {
@@ -32,13 +32,12 @@ export function computeChargedShotVelocity({
   const t = clampedCharge / 100; // 0.0 -> 1.0 linear interpolation factor
 
   if (isLob) {
-    // High arcing pallonetto to push opponents back
-    const lobSpeedY = 2.0 + t * 1.1; // 2.0 to 3.1
-    const lobVx = aimX * (1.1 + t * 1.2);
+    const lobSpeedY = 1.95 + t * 1.05;
+    const lobVx = aimX * (1.05 + t * 1.15);
     return {
       vx: lobVx,
       vy: dirY * lobSpeedY,
-      vz: 4.9 + t * 0.9,
+      vz: 4.85 + t * 0.85,
       spin: 0,
       shotType: 'PALLONETTO!',
       isSmash: false,
@@ -46,24 +45,22 @@ export function computeChargedShotVelocity({
   }
 
   // Linearly interpolate horizontal & vertical speed from charge (0..100)
-  // Low charge (t ~ 0): vy = 1.65 (short chiquita / drop shot barely clearing net)
-  // Full charge (t = 1): vy = 4.65 (deep power shot to the glass / smash)
-  const minVy = 1.65;
-  const maxVy = 4.65;
+  const minVy = 1.62;
+  const maxVy = 4.55;
   const speedY = minVy + t * (maxVy - minVy);
 
   const minVxScale = 0.85;
-  const maxVxScale = 2.75;
+  const maxVxScale = 2.65;
   const vx = aimX * (minVxScale + t * (maxVxScale - minVxScale));
 
-  const nearNet = dirY < 0 ? playerY < COURT.NET_Y + 48 : playerY > COURT.NET_Y - 48;
+  const nearNet = dirY < 0 ? playerY < COURT.NET_Y + 46 : playerY > COURT.NET_Y - 46;
 
   // High ball near net + high charge => SMASH X3!
-  if (clampedCharge >= 72 && (ballZ > 15 || nearNet)) {
+  if (clampedCharge >= 72 && (ballZ > 14 || nearNet)) {
     return {
-      vx: vx * 1.1,
-      vy: dirY * (speedY * 1.08),
-      vz: -1.35,
+      vx: vx * 1.08,
+      vy: dirY * (speedY * 1.06),
+      vz: -1.3,
       spin: (Math.random() - 0.5) * 0.45,
       shotType: '🔥 SMASH X3!',
       isSmash: true,
@@ -74,8 +71,8 @@ export function computeChargedShotVelocity({
   if (clampedCharge <= 25) {
     return {
       vx: vx * 0.75,
-      vy: dirY * (1.55 + t * 1.2),
-      vz: 1.95 + t * 0.6,
+      vy: dirY * (1.52 + t * 1.15),
+      vz: 1.92 + t * 0.55,
       spin: aimX * 0.15,
       shotType: 'CHIQUITA!',
       isSmash: false,
@@ -87,7 +84,7 @@ export function computeChargedShotVelocity({
     return {
       vx,
       vy: dirY * speedY,
-      vz: 2.35 + (1 - t) * 0.45,
+      vz: 2.3 + (1 - t) * 0.45,
       spin: aimX * 0.25,
       shotType: 'BANDEJA!',
       isSmash: false,
@@ -98,8 +95,8 @@ export function computeChargedShotVelocity({
   return {
     vx,
     vy: dirY * speedY,
-    vz: 2.05,
-    spin: aimX * 0.38,
+    vz: 2.02,
+    spin: aimX * 0.35,
     shotType: '⚡ VIBORA A VETRO!',
     isSmash: false,
   };
@@ -107,10 +104,10 @@ export function computeChargedShotVelocity({
 
 export class BallPhysics {
   constructor() {
-    this.reset(160, 195, -1);
+    this.reset(160, 214, -1);
   }
 
-  reset(x = 160, y = 195, serveDir = -1) {
+  reset(x = 160, y = 214, serveDir = -1) {
     this.x = x;
     this.y = y;
     this.z = 12;
@@ -118,7 +115,7 @@ export class BallPhysics {
     this.vy = 0;
     this.vz = 0;
     this.spin = 0;
-    this.gravity = 0.15;
+    this.gravity = 0.145;
     this.inPlay = false;
     this.serveDir = serveDir;
     this.bouncesOnCurrentSide = 0;
@@ -127,6 +124,8 @@ export class BallPhysics {
     this.outOfCage = false;
     this.landingTarget = { x: x, y: y };
     this.trail = [];
+    this.lastWallHit = null;    // { x, y, wall, isMesh, timer }
+    this.lastGroundBounce = null; // { x, y, timer }
   }
 
   launch(vx, vy, vz, hitterTeam, isSmash = false, spin = 0) {
@@ -143,11 +142,18 @@ export class BallPhysics {
   }
 
   update() {
+    if (this.lastWallHit && this.lastWallHit.timer > 0) {
+      this.lastWallHit.timer--;
+    }
+    if (this.lastGroundBounce && this.lastGroundBounce.timer > 0) {
+      this.lastGroundBounce.timer--;
+    }
+
     if (!this.inPlay) return null;
 
-    if (Math.random() < 0.65) {
+    if (Math.random() < 0.7) {
       this.trail.push({ x: this.x, y: this.y, z: this.z });
-      if (this.trail.length > 7) this.trail.shift();
+      if (this.trail.length > 8) this.trail.shift();
     }
 
     const prevY = this.y;
@@ -158,7 +164,7 @@ export class BallPhysics {
 
     // Reset bounce counter when crossing the net
     if ((prevY > COURT.NET_Y && this.y <= COURT.NET_Y) || (prevY < COURT.NET_Y && this.y >= COURT.NET_Y)) {
-      if (this.z < 10) {
+      if (this.z < 9.5) {
         sound.meshBounce();
         this.vy *= -0.25;
         this.vx *= 0.4;
@@ -172,11 +178,12 @@ export class BallPhysics {
       this.z = 0;
       this.bouncesOnCurrentSide++;
       sound.groundBounce();
+      this.lastGroundBounce = { x: this.x, y: this.y, timer: 12 };
 
       this.vx += this.spin * 0.55;
 
-      if (this.isSmash && Math.abs(this.vy) > 3.1) {
-        this.vz = 5.4;
+      if (this.isSmash && Math.abs(this.vy) > 3.0) {
+        this.vz = 5.3;
       } else {
         this.vz = Math.max(1.85, Math.abs(this.vz) * 0.68);
       }
@@ -195,7 +202,8 @@ export class BallPhysics {
 
     // Side Walls (Glass near baseline, Metallic Mesh near net)
     if (this.x <= COURT.LEFT || this.x >= COURT.RIGHT) {
-      if (this.z > 32 && this.isSmash) {
+      const hitLeft = this.x <= COURT.LEFT;
+      if (this.z > 31 && this.isSmash) {
         this.outOfCage = true;
         const winner = this.lastHitterTeam;
         return { event: 'smash_x3', winner };
@@ -206,13 +214,21 @@ export class BallPhysics {
         return { event: 'wall_fault', winner };
       }
 
-      this.x = this.x <= COURT.LEFT ? COURT.LEFT + 1 : COURT.RIGHT - 1;
-      const nearNetZone = Math.abs(this.y - COURT.NET_Y) < 42;
+      this.x = hitLeft ? COURT.LEFT + 1 : COURT.RIGHT - 1;
+      const nearNetZone = Math.abs(this.y - COURT.NET_Y) < 38;
+
+      this.lastWallHit = {
+        x: hitLeft ? COURT.LEFT : COURT.RIGHT,
+        y: this.y,
+        wall: hitLeft ? 'left' : 'right',
+        isMesh: nearNetZone,
+        timer: 16,
+      };
 
       if (nearNetZone) {
         sound.meshBounce();
         this.vx = -this.vx * (0.55 + Math.random() * 0.35);
-        this.vy += (Math.random() - 0.5) * 1.4;
+        this.vy += (Math.random() - 0.5) * 1.35;
       } else {
         sound.glassBounce();
         this.vx = -this.vx * 0.78;
@@ -222,15 +238,24 @@ export class BallPhysics {
 
     // Back Glass Walls (Top and Bottom)
     if (this.y <= COURT.TOP || this.y >= COURT.BOTTOM) {
+      const hitTop = this.y <= COURT.TOP;
       if (this.bouncesOnCurrentSide === 0) {
         const winner = this.lastHitterTeam === 'player' ? 'cpu' : 'player';
         return { event: 'out_fault', winner };
       }
 
       sound.glassBounce();
-      this.y = this.y <= COURT.TOP ? COURT.TOP + 1 : COURT.BOTTOM - 1;
+      this.lastWallHit = {
+        x: this.x,
+        y: hitTop ? COURT.TOP : COURT.BOTTOM,
+        wall: hitTop ? 'top' : 'bottom',
+        isMesh: false,
+        timer: 18,
+      };
+
+      this.y = hitTop ? COURT.TOP + 1 : COURT.BOTTOM - 1;
       this.vy = -this.vy * 0.72;
-      this.vz = Math.max(this.vz, 1.8);
+      this.vz = Math.max(this.vz, 1.85);
       this.computeLandingPrediction();
     }
 

@@ -24,8 +24,7 @@ export class PadelTeamAI {
       targetX = Math.max(COURT.LEFT + 20, Math.min(centerX - 12, targetX - 36));
     }
 
-    // Follow human net-rush or stay balanced
-    let targetY = human.y < COURT.SERVICE_BOTTOM ? human.y + 6 : 196;
+    let targetY = human.y < COURT.SERVICE_BOTTOM ? human.y + 6 : 212;
 
     // 2. If ball is coming to bottom half and closer to partner, intercept!
     const ballComingToPlayerSide = ball.inPlay && (ball.vy > 0 || ball.landingTarget.y > COURT.NET_Y);
@@ -33,7 +32,7 @@ export class PadelTeamAI {
       const distPartner = Math.hypot(ball.landingTarget.x - partner.x, ball.landingTarget.y - partner.y);
       const distHuman = Math.hypot(ball.landingTarget.x - human.x, ball.landingTarget.y - human.y);
 
-      if (distPartner < distHuman - 6 || ball.landingTarget.x > 175) {
+      if (distPartner < distHuman - 6 || ball.landingTarget.x > 176) {
         targetX = ball.landingTarget.x;
         targetY = Math.max(COURT.NET_Y + 18, Math.min(COURT.BOTTOM - 12, ball.landingTarget.y));
 
@@ -50,12 +49,12 @@ export class PadelTeamAI {
     this._moveAgent(partner, targetX, targetY);
 
     // 3. Partner strikes the ball if within reach
-    if (ball.inPlay && ball.lastHitterTeam !== 'player' && partner.canReachBall(ball) && ball.z < 26) {
+    if (ball.inPlay && ball.lastHitterTeam !== 'player' && partner.canReachBall(ball) && ball.z < 27) {
       partner.swingTimer = 14;
       sound.paddleHit(1.05);
-      const aimX = (Math.random() - 0.5) * 2.1;
-      const vy = -3.15 - Math.random() * 0.55;
-      const vz = ball.z > 16 ? 1.85 : 2.55;
+      const aimX = (Math.random() - 0.5) * 2.0;
+      const vy = -3.1 - Math.random() * 0.5;
+      const vz = ball.z > 16 ? 1.85 : 2.5;
       ball.launch(aimX, vy, vz, 'player', false, (Math.random() - 0.5) * 0.25);
     }
   }
@@ -69,9 +68,9 @@ export class PadelTeamAI {
     const ballHeadingTop = ball.inPlay && (ball.vy < 0 || ball.landingTarget.y < COURT.NET_Y);
 
     let leftTargetX = 112;
-    let leftTargetY = 58;
+    let leftTargetY = 78;
     let rightTargetX = 208;
-    let rightTargetY = 58;
+    let rightTargetY = 78;
 
     if (ballHeadingTop) {
       const tx = ball.landingTarget.x;
@@ -92,8 +91,8 @@ export class PadelTeamAI {
       const shift = (ball.x - 160) * 0.22;
       leftTargetX = 112 + shift;
       rightTargetX = 208 + shift;
-      leftTargetY = 64;
-      rightTargetY = 64;
+      leftTargetY = 82;
+      rightTargetY = 82;
     }
 
     this._moveAgent(cpuLeft, leftTargetX, leftTargetY);
@@ -103,18 +102,18 @@ export class PadelTeamAI {
       if (ball.inPlay && ball.lastHitterTeam !== 'cpu' && cpu.canReachBall(ball) && ball.z < 28) {
         cpu.swingTimer = 14;
         const isHighNearNet = ball.z > 18 && cpu.y > COURT.SERVICE_TOP;
-        if (isHighNearNet && Math.random() < 0.35) {
+        if (isHighNearNet && Math.random() < 0.32) {
           sound.smashHit();
           cpu.say('VAMOS!', 35);
-          ball.launch((Math.random() - 0.5) * 2.4, 3.85, -1.0, 'cpu', true, 0.25);
-        } else if (Math.random() < 0.22) {
+          ball.launch((Math.random() - 0.5) * 2.2, 3.7, -0.95, 'cpu', true, 0.25);
+        } else if (Math.random() < 0.24) {
           sound.paddleHit(0.85);
           cpu.say('GLOBO!', 35);
-          ball.launch((Math.random() - 0.5) * 1.6, 2.35, 4.7, 'cpu', false, 0);
+          ball.launch((Math.random() - 0.5) * 1.5, 2.3, 4.6, 'cpu', false, 0);
         } else {
           sound.paddleHit(1.0);
-          const targetVx = ((160 - cpu.x) / 90) + (Math.random() - 0.5) * 1.7;
-          ball.launch(targetVx, 3.0 + Math.random() * 0.65, 2.35, 'cpu', false, (Math.random() - 0.5) * 0.2);
+          const targetVx = ((160 - cpu.x) / 92) + (Math.random() - 0.5) * 1.55;
+          ball.launch(targetVx, 2.95 + Math.random() * 0.55, 2.32, 'cpu', false, (Math.random() - 0.5) * 0.2);
         }
       }
     });

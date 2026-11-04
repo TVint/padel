@@ -6,10 +6,10 @@
   <title>REBRUNCH // Republic Sport Village - GBC Advergame</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Playball&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/retro.css" />
 </head>
-<body>
+<body data-skin="classic">
 
   <!-- MOBILE LANDSCAPE BLOCKER OVERLAY -->
   <div id="landscape-overlay" role="alert" aria-live="assertive">
@@ -20,314 +20,341 @@
   </div>
 
   <main class="app-wrapper">
-    <!-- DANDELION YELLOW GAME BOY COLOR SHELL -->
-    <section class="gbc-shell" id="gbc-shell" aria-label="Game Boy Color Console">
+    <!-- GAME BOY COLOR SHELL (3 SKINS: CLASSIC / UOMO / DONNA) -->
+    <section class="gbc-shell" id="gbc-shell" data-skin="classic" aria-label="Game Boy Color Console">
 
-      <!-- TOP SHELL INDENT -->
-      <div class="shell-top-groove">
-        <span>◀ OFF•ON ▶</span>
-        <span class="shell-model-tag">REPUBLIC GBC-2911</span>
+      <!-- CORNER SCREWS (CLASSIC SHELL REFERENCE) -->
+      <span class="shell-screw screw-tl" aria-hidden="true"></span>
+      <span class="shell-screw screw-tr" aria-hidden="true"></span>
+      <span class="shell-screw screw-bl" aria-hidden="true"></span>
+      <span class="shell-screw screw-br" aria-hidden="true"></span>
+
+      <!-- DECORATIVE STICKERS FOR "UOMO" (PEA GREEN) & "DONNA" (SHOCKING PINK GLITTER) SKINS -->
+      <div class="skin-stickers stickers-uomo" aria-hidden="true">
+        <span class="sticker st-u1">⚡ SMASH KING</span>
+        <span class="sticker st-u2">🍺 BIRRA &amp; BOMBER</span>
+        <span class="sticker st-u3">🔥 TURBO 16V</span>
+        <span class="sticker st-u4">💀 NO LOB</span>
+      </div>
+      <div class="skin-stickers stickers-donna" aria-hidden="true">
+        <span class="sticker st-d1 glitter-badge">💖 PADEL QUEEN ✨</span>
+        <span class="sticker st-d2 glitter-badge">🥂 SPRITZ LOVER</span>
+        <span class="sticker st-d3 glitter-badge">👑 DIVA COURT</span>
+        <span class="sticker st-d4 glitter-badge">💎 GLITTER✨</span>
       </div>
 
-      <!-- DARK LENS BEZEL -->
+      <!-- SLIM NON-INVASIVE SKIN & AUDIO MENU BAR (REPLACES OLD BATTERY BAND) -->
+      <nav class="slim-skin-bar" id="skin-toolbar" aria-label="Selettore Skin Game Boy">
+        <div class="skin-tabs">
+          <span class="skin-lbl">SKIN:</span>
+          <button type="button" class="skin-btn active" data-set-skin="classic">🕹️ CLASSICA</button>
+          <button type="button" class="skin-btn" data-set-skin="uomo">🟢 UOMO</button>
+          <button type="button" class="skin-btn" data-set-skin="donna">💖 DONNA</button>
+        </div>
+        <div class="slim-utils">
+          <button type="button" id="btn-audio-toggle" class="mini-bezel-btn" title="Audio 8-Bit ON/OFF">♪ ON</button>
+          <button type="button" id="btn-crt-toggle" class="mini-bezel-btn" title="Scanlines CRT">CRT</button>
+        </div>
+      </nav>
+
+      <!-- BEVELED METALLIC SCREEN FRAME (MATCHING POSTER REFERENCE) -->
       <div class="gbc-lens">
-        <div class="lens-top-row">
-          <div class="lens-stripes">
-            <span class="stripe-red"></span>
-            <span class="stripe-blue"></span>
-          </div>
-          <div class="lens-title">DOT MATRIX WITH STEREO SOUND</div>
-          <div class="lens-actions">
-            <button type="button" id="btn-audio-toggle" class="mini-bezel-btn" title="Audio 8-Bit ON/OFF">♪ SFX:ON</button>
-            <button type="button" id="btn-crt-toggle" class="mini-bezel-btn" title="Scanlines CRT">CRT:ON</button>
-          </div>
-        </div>
+        <!-- CENTRAL SAGE-GREEN RETRO LCD VIEWPORT (FULL WIDTH, NO BATTERY BAND) -->
+        <div class="lcd-screen scanlines" id="lcd-screen">
 
-        <div class="lens-body">
-          <!-- BATTERY LED -->
-          <div class="battery-indicator">
-            <div class="power-led" id="power-led"></div>
-            <span class="battery-label">BATTERY</span>
+          <!-- HARDWARE VOLUME / EASTER EGG OSD -->
+          <div id="volume-osd" class="volume-osd" aria-hidden="true">
+            <div class="vol-title" id="vol-osd-title">VOL CHIPTUNE</div>
+            <div class="vol-bars" id="vol-osd-bars">████████░░</div>
           </div>
 
-          <!-- CENTRAL LCD SCREEN -->
-          <div class="lcd-screen scanlines" id="lcd-screen">
+          <!-- ==========================================
+               VIEW 1: POSTER / HOME SCREEN (INTRO)
+               EXACT MATCH TO ATTACHED REFERENCE POSTER
+               ========================================== -->
+          <div class="lcd-view active" id="view-intro">
+            <div class="poster-screen">
+              <!-- REPUBLIC SPORT VILLAGE LOGO -->
+              <div class="republic-brand">
+                <div class="republic-word">Republic</div>
+                <div class="republic-sub">Sport Village</div>
+              </div>
 
-            <!-- HARDWARE VOLUME / EASTER EGG OSD -->
-            <div id="volume-osd" class="volume-osd" aria-hidden="true">
-              <div class="vol-title" id="vol-osd-title">VOL CHIPTUNE</div>
-              <div class="vol-bars" id="vol-osd-bars">████████░░</div>
+              <!-- EVENT DATE & TIME -->
+              <div class="poster-date-block">
+                <div class="date-dow">DOMENICA</div>
+                <div class="date-day-month">
+                  <span class="day-num">29</span><span class="month-name">NOVEMBRE</span>
+                </div>
+                <div class="date-hours">dalle ore 10:00 alle 14:30</div>
+              </div>
+
+              <!-- ORIGINAL PIXEL ART ILLUSTRATION + REBRUNCH + EAT. PLAY. REPEAT. -->
+              <div class="poster-hero-art">
+                <img src="assets/rebrunch-art.png" alt="Rebrunch - Eat. Play. Repeat." class="rebrunch-hero-img" />
+              </div>
             </div>
+          </div>
 
-            <!-- ==========================================
-                 VIEW 1: POSTER / HOME SCREEN (INTRO)
-                 ========================================== -->
-            <div class="lcd-view active" id="view-intro">
-              <div class="poster-screen">
-                <div class="poster-header-box">
-                  <div class="poster-title">REBRUNCH</div>
-                  <div class="poster-sub">Republic Sport Village</div>
-                </div>
+          <!-- ==========================================
+               VIEW 2: PULSANTE VERDE -> BRUNCH MENU
+               ========================================== -->
+          <div class="lcd-view" id="view-brunch">
+            <div class="lcd-card-view theme-green">
+              <div class="card-view-header">
+                <span>🟢 BRUNCH MENU</span>
+                <button type="button" class="lcd-back-btn" data-open-view="view-intro">✖ HOME</button>
+              </div>
+              <ol class="brunch-list">
+                <li><span class="px-icon">🍔</span><span class="item-name">HAMBURGER</span></li>
+                <li><span class="px-icon">🥪</span><span class="item-name">CLUB SANDWITCH</span></li>
+                <li><span class="px-icon">🥑</span><span class="item-name">AVOCADO TOAST</span></li>
+                <li><span class="px-icon">🥞</span><span class="item-name">PANCAKE</span></li>
+                <li><span class="px-icon">🥐</span><span class="item-name">COLAZIONE ITALIANA</span></li>
+                <li><span class="px-icon">🍺</span><span class="item-name">BIRRE</span></li>
+                <li><span class="px-icon">🍹</span><span class="item-name">SPRIZ</span></li>
+                <li><span class="px-icon">🥤</span><span class="item-name">SOFT DRINK</span></li>
+              </ol>
+              <div class="card-view-footer">
+                PREMI <strong>GIOCA</strong> PER SCENDERE IN CAMPO!
+              </div>
+            </div>
+          </div>
 
-                <!-- PIXEL ART MINI SCENE (PADEL + DJ + DRINKS) -->
-                <div class="poster-scene">
-                  <canvas id="intro-canvas" width="296" height="128"></canvas>
-                </div>
+          <!-- ==========================================
+               VIEW 3: PULSANTE ROSSO -> APERITIVO DJ SET
+               ========================================== -->
+          <div class="lcd-view" id="view-aperitivo">
+            <div class="lcd-card-view theme-red">
+              <div class="card-view-header">
+                <span>🔴 APERITIVO DJ SET</span>
+                <button type="button" class="lcd-back-btn" data-open-view="view-intro">✖ HOME</button>
+              </div>
 
-                <!-- EVENT DETAILS -->
-                <div class="poster-details">
-                  <div class="poster-date">DOMENICA 29.11</div>
-                  <div class="poster-location">VIA DELLE Olimpiadi, 6<br>30020 Marcon (VE)</div>
+              <div class="dj-set-banner blink">MORNING SET 10:00 - 14:00</div>
 
-                  <div class="poster-pills">
-                    <button type="button" class="pill pill-green" data-open-view="view-brunch" data-track-area="green_brunch">🟢 BRUNCH</button>
-                    <button type="button" class="pill pill-red" data-open-view="view-aperitivo" data-track-area="red_aperitivo">🔴 APERITIVO</button>
-                    <button type="button" class="pill pill-yellow" data-open-view="view-torneo" data-track-area="yellow_torneo">🟡 TORNEO</button>
-                  </div>
+              <div class="dj-stage-wrap">
+                <canvas id="dj-canvas" width="280" height="136"></canvas>
+              </div>
 
-                  <div class="poster-start-cta blink" id="intro-play-cta">
-                    PREMI IL TASTO "GIOCA" PER INIZIARE!
-                  </div>
+              <div class="y2k-marquee-box">
+                <marquee behavior="scroll" direction="left" scrollamount="4" class="y2k-marquee">
+                  /// RAW BEATS &amp; ACID VIBES /// BRUNCH HARD, DANCE HARDER /// NO REQUESTS ///
+                </marquee>
+              </div>
+            </div>
+          </div>
+
+          <!-- ==========================================
+               VIEW 4: PULSANTE GIALLO -> TORNEO & WHATSAPP
+               ========================================== -->
+          <div class="lcd-view" id="view-torneo">
+            <div class="lcd-card-view theme-yellow">
+              <div class="card-view-header">
+                <span>🟡 ISCRIZIONE TORNEO</span>
+                <button type="button" class="lcd-back-btn" data-open-view="view-intro">✖ HOME</button>
+              </div>
+
+              <div class="torneo-body">
+                <div class="torneo-trophy">🏆 PADEL &amp; TENNIS CUP 🏆</div>
+                <p class="torneo-copy">
+                  Per iscrizioni contattare<br>
+                  <strong>Mirko Favaro / Mario Mastropietro</strong>
+                </p>
+
+                <button type="button" id="btn-wa-toggle" class="wa-big-btn">
+                  <span class="wa-px-icon">💬</span> WHATSAPP 8-BIT ▾
+                </button>
+
+                <div id="wa-submenu" class="wa-submenu">
+                  <a class="wa-contact-link"
+                     href="https://wa.me/393497220003/?text=Ciao,%20vorrei%20iscrivermi%20al%20torneo%20di%20padel!"
+                     target="_blank"
+                     rel="noopener noreferrer">
+                    ▶ MARIO (3497220003)
+                  </a>
+                  <a class="wa-contact-link"
+                     href="https://wa.me/393356163368/?text=Ciao,%20vorrei%20iscrivermi%20al%20torneo%20di%20padel!"
+                     target="_blank"
+                     rel="noopener noreferrer">
+                    ▶ MIRKO (3356163368)
+                  </a>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- ==========================================
-                 VIEW 2: PULSANTE VERDE -> BRUNCH MENU
-                 ========================================== -->
-            <div class="lcd-view" id="view-brunch">
-              <div class="lcd-card-view theme-green">
-                <div class="card-view-header">
-                  <span>🟢 BRUNCH MENU</span>
-                  <button type="button" class="lcd-back-btn" data-open-view="view-intro">✖ HOME</button>
-                </div>
-                <ol class="brunch-list">
-                  <li><span class="px-icon">🍔</span><span class="item-name">HAMBURGER</span></li>
-                  <li><span class="px-icon">🥪</span><span class="item-name">CLUB SANDWITCH</span></li>
-                  <li><span class="px-icon">🥑</span><span class="item-name">AVOCADO TOAST</span></li>
-                  <li><span class="px-icon">🥞</span><span class="item-name">PANCAKE</span></li>
-                  <li><span class="px-icon">🥐</span><span class="item-name">COLAZIONE ITALIANA</span></li>
-                  <li><span class="px-icon">🍺</span><span class="item-name">BIRRE</span></li>
-                  <li><span class="px-icon">🍹</span><span class="item-name">SPRIZ</span></li>
-                  <li><span class="px-icon">🥤</span><span class="item-name">SOFT DRINK</span></li>
-                </ol>
-                <div class="card-view-footer">
-                  PREMI <strong>GIOCA</strong> PER SCENDERE IN CAMPO!
-                </div>
+          <!-- ==========================================
+               VIEW 5: SUPER PADEL DX 2V2 + C64 CROWD + LEADERBOARD
+               ========================================== -->
+          <div class="lcd-view" id="view-game">
+            <!-- SCOREBOARD HUD -->
+            <div class="lcd-game-hud">
+              <div class="hud-team hud-you">
+                <span class="hud-lbl" id="hud-player-name">TU+SOCIO</span>
+                <span class="hud-pts" id="hud-score-p1">0</span>
+                <span class="hud-gms" id="hud-games-p1">G:0</span>
+              </div>
+              <div class="hud-center">
+                <div id="hud-shot-badge" class="shot-badge">READY!</div>
+                <button type="button" class="hud-home-link" data-open-view="view-intro">✖ HOME</button>
+              </div>
+              <div class="hud-team hud-cpu">
+                <span class="hud-lbl">MAESTRI</span>
+                <span class="hud-pts" id="hud-score-cpu">0</span>
+                <span class="hud-gms" id="hud-games-cpu">G:0</span>
               </div>
             </div>
 
-            <!-- ==========================================
-                 VIEW 3: PULSANTE ROSSO -> APERITIVO DJ SET
-                 ========================================== -->
-            <div class="lcd-view" id="view-aperitivo">
-              <div class="lcd-card-view theme-red">
-                <div class="card-view-header">
-                  <span>🔴 APERITIVO DJ SET</span>
-                  <button type="button" class="lcd-back-btn" data-open-view="view-intro">✖ HOME</button>
-                </div>
+            <!-- PIXEL-PERFECT COURT CANVAS WITH 2.5D WALLS & C64 CROWD -->
+            <div class="canvas-holder">
+              <canvas id="game-canvas" width="320" height="264"></canvas>
 
-                <div class="dj-set-banner blink">MORNING SET 10:00 - 14:00</div>
+              <!-- END-OF-MATCH ARCADE HIGH SCORE MODAL -->
+              <div class="lcd-modal" id="match-over-modal" style="display:none;">
+                <div class="modal-box">
+                  <h4 id="match-over-title">FINE PARTITA!</h4>
+                  <p id="match-over-score">PUNTEGGIO: 0 PTS</p>
 
-                <div class="dj-stage-wrap">
-                  <canvas id="dj-canvas" width="280" height="136"></canvas>
-                </div>
-
-                <div class="y2k-marquee-box">
-                  <marquee behavior="scroll" direction="left" scrollamount="4" class="y2k-marquee">
-                    /// RAW BEATS &amp; ACID VIBES /// BRUNCH HARD, DANCE HARDER /// NO REQUESTS ///
-                  </marquee>
-                </div>
-              </div>
-            </div>
-
-            <!-- ==========================================
-                 VIEW 4: PULSANTE GIALLO -> TORNEO & WHATSAPP
-                 ========================================== -->
-            <div class="lcd-view" id="view-torneo">
-              <div class="lcd-card-view theme-yellow">
-                <div class="card-view-header">
-                  <span>🟡 ISCRIZIONE TORNEO</span>
-                  <button type="button" class="lcd-back-btn" data-open-view="view-intro">✖ HOME</button>
-                </div>
-
-                <div class="torneo-body">
-                  <div class="torneo-trophy">🏆 PADEL &amp; TENNIS CUP 🏆</div>
-                  <p class="torneo-copy">
-                    Per iscrizioni contattare<br>
-                    <strong>Mirko Favaro / Mario Mastropietro</strong>
-                  </p>
-
-                  <button type="button" id="btn-wa-toggle" class="wa-big-btn">
-                    <span class="wa-px-icon">💬</span> WHATSAPP 8-BIT ▾
-                  </button>
-
-                  <div id="wa-submenu" class="wa-submenu">
-                    <a class="wa-contact-link"
-                       href="https://wa.me/393497220003/?text=Ciao,%20vorrei%20iscrivermi%20al%20torneo%20di%20padel!"
-                       target="_blank"
-                       rel="noopener noreferrer">
-                      ▶ MARIO (3497220003)
-                    </a>
-                    <a class="wa-contact-link"
-                       href="https://wa.me/393356163368/?text=Ciao,%20vorrei%20iscrivermi%20al%20torneo%20di%20padel!"
-                       target="_blank"
-                       rel="noopener noreferrer">
-                      ▶ MIRKO (3356163368)
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- ==========================================
-                 VIEW 5: SUPER PADEL DX 2V2 + LEADERBOARD
-                 ========================================== -->
-            <div class="lcd-view" id="view-game">
-              <!-- SCOREBOARD HUD -->
-              <div class="lcd-game-hud">
-                <div class="hud-team hud-you">
-                  <span class="hud-lbl" id="hud-player-name">TU+CPU</span>
-                  <span class="hud-pts" id="hud-score-p1">0</span>
-                  <span class="hud-gms" id="hud-games-p1">G:0</span>
-                </div>
-                <div class="hud-center">
-                  <div id="hud-shot-badge" class="shot-badge">READY!</div>
-                  <div class="hud-sub">PADEL 2V2</div>
-                </div>
-                <div class="hud-team hud-cpu">
-                  <span class="hud-lbl">MAESTRI</span>
-                  <span class="hud-pts" id="hud-score-cpu">0</span>
-                  <span class="hud-gms" id="hud-games-cpu">G:0</span>
-                </div>
-              </div>
-
-              <!-- PIXEL-PERFECT COURT CANVAS -->
-              <div class="canvas-holder">
-                <canvas id="game-canvas" width="320" height="256"></canvas>
-
-                <!-- END-OF-MATCH ARCADE HIGH SCORE MODAL -->
-                <div class="lcd-modal" id="match-over-modal" style="display:none;">
-                  <div class="modal-box">
-                    <h4 id="match-over-title">FINE PARTITA!</h4>
-                    <p id="match-over-score">PUNTEGGIO: 0 PTS</p>
-
-                    <form id="arcade-score-form" class="arcade-score-form" autocomplete="off">
-                      <label for="arcade-name-input">INSERISCI 3 LETTERE / NOME:</label>
-                      <div class="arcade-input-row">
-                        <input
-                          type="text"
-                          id="arcade-name-input"
-                          name="name"
-                          maxlength="10"
-                          placeholder="AAA"
-                          value="AAA"
-                          required
-                        />
-                        <button type="submit" id="btn-save-score" class="lcd-btn-primary">SALVA</button>
-                      </div>
-                      <div id="arcade-save-feedback" class="arcade-save-feedback"></div>
-                    </form>
-
-                    <div class="modal-actions">
-                      <button type="button" class="lcd-btn-secondary" id="btn-play-again">RIGIOCA</button>
-                      <button type="button" class="lcd-btn-secondary" id="btn-scroll-rank">CLASSIFICA ▼</button>
+                  <form id="arcade-score-form" class="arcade-score-form" autocomplete="off">
+                    <label for="arcade-name-input">INSERISCI 3 LETTERE / NOME:</label>
+                    <div class="arcade-input-row">
+                      <input
+                        type="text"
+                        id="arcade-name-input"
+                        name="name"
+                        maxlength="10"
+                        placeholder="AAA"
+                        value="AAA"
+                        required
+                      />
+                      <button type="submit" id="btn-save-score" class="lcd-btn-primary">SALVA</button>
                     </div>
+                    <div id="arcade-save-feedback" class="arcade-save-feedback"></div>
+                  </form>
+
+                  <div class="modal-actions">
+                    <button type="button" class="lcd-btn-secondary" id="btn-play-again">RIGIOCA</button>
+                    <button type="button" class="lcd-btn-secondary" id="btn-scroll-rank">CLASSIFICA ▼</button>
                   </div>
-                </div>
-              </div>
-
-              <!-- CONTROLS BAR -->
-              <div class="game-controls-hint">
-                <span>🟢/🔴: TIRO (TIENI PREMUTO=CARICA)</span>
-                <span>🟡: LOB / TUFFO</span>
-              </div>
-
-              <!-- LIVE HALL OF FAME INSIDE LCD -->
-              <div class="hall-of-fame" id="hall-of-fame">
-                <div class="hof-header">
-                  <span>🏆 TOP SCORE LEADERBOARD</span>
-                  <button type="button" id="btn-refresh-hof" class="hof-refresh">↻</button>
-                </div>
-
-                <div class="hof-list" id="hof-matches-list">
-                  <div class="hof-empty">Caricamento classifica...</div>
                 </div>
               </div>
             </div>
 
-          </div><!-- /#lcd-screen -->
-        </div>
+            <!-- CONTROLS BAR -->
+            <div class="game-controls-hint">
+              <span>🟢/🔴: TIRO (TIENI PREMUTO=CARICA)</span>
+              <span>🟡: LOB / TUFFO</span>
+            </div>
 
-        <!-- GBC LOGO UNDER SCREEN -->
-        <div class="lens-bottom-logo">
-          <span class="gbc-word">GAME BOY</span>
-          <span class="color-word">
-            <b class="c-r">C</b><b class="c-o">O</b><b class="c-g">L</b><b class="c-b">O</b><b class="c-p">R</b>
-          </span>
-        </div>
+            <!-- LIVE HALL OF FAME INSIDE LCD -->
+            <div class="hall-of-fame" id="hall-of-fame">
+              <div class="hof-header">
+                <span>🏆 TOP SCORE LEADERBOARD</span>
+                <button type="button" id="btn-refresh-hof" class="hof-refresh">↻</button>
+              </div>
+
+              <div class="hof-list" id="hof-matches-list">
+                <div class="hof-empty">Caricamento classifica...</div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /#lcd-screen -->
       </div><!-- /.gbc-lens -->
 
-      <!-- NINTENDO EMBOSS -->
-      <div class="nintendo-emboss">REPUBLIC SPORT VILLAGE</div>
+      <!-- TWIN PIXEL LEDS UNDER SCREEN (EXACT MATCH TO POSTER REFERENCE) -->
+      <div class="center-leds-row" aria-hidden="true">
+        <span class="px-led led-red"></span>
+        <span class="px-led led-green"></span>
+      </div>
 
-      <!-- PHYSICAL CONTROLS AREA (40% LARGER ERGONOMIC MOBILE THUMB LAYOUT) -->
+      <!-- TWO SCREWED BEVELED CONTROL PANELS (EXACT MATCH TO POSTER REFERENCE) -->
       <div class="gbc-controls-deck">
 
-        <!-- D-PAD CROSS (LEFT THUMB EDGE) -->
-        <div class="dpad-wrapper" aria-label="Croce Direzionale">
-          <div class="dpad-cross">
-            <button type="button" class="dpad-btn dpad-up" id="btn-up" data-dir="up" aria-label="Su">▲</button>
-            <button type="button" class="dpad-btn dpad-left" id="btn-left" data-dir="left" aria-label="Sinistra">◀</button>
-            <div class="dpad-center"></div>
-            <button type="button" class="dpad-btn dpad-right" id="btn-right" data-dir="right" aria-label="Destra">▶</button>
-            <button type="button" class="dpad-btn dpad-down" id="btn-down" data-dir="down" aria-label="Giù">▼</button>
+        <!-- LEFT SCREWED PANEL: YELLOW PIXEL D-PAD + "live Dj Set" -->
+        <div class="control-plate plate-dpad" aria-label="Croce Direzionale">
+          <span class="plate-screw ps-tl"></span>
+          <span class="plate-screw ps-tr"></span>
+          <span class="plate-screw ps-bl"></span>
+          <span class="plate-screw ps-br"></span>
+
+          <div class="dpad-wrapper">
+            <div class="dpad-cross">
+              <button type="button" class="dpad-btn dpad-up" id="btn-up" data-dir="up" aria-label="Su">▲</button>
+              <button type="button" class="dpad-btn dpad-left" id="btn-left" data-dir="left" aria-label="Sinistra">◀</button>
+              <div class="dpad-center-label">
+                <span class="live-word">live</span>
+                <span class="djset-word">Dj Set</span>
+              </div>
+              <button type="button" class="dpad-btn dpad-right" id="btn-right" data-dir="right" aria-label="Destra">▶</button>
+              <button type="button" class="dpad-btn dpad-down" id="btn-down" data-dir="down" aria-label="Giù">▼</button>
+            </div>
           </div>
         </div>
 
-        <!-- 3 COLORED BUTTONS (RIGHT THUMB EDGE): GREEN (BRUNCH), RED (APERITIVO), YELLOW (TORNEO) -->
-        <div class="color-buttons-cluster" aria-label="Pulsanti Evento e Azione">
-          <!-- RED BUTTON: APERITIVO / POWER SHOT -->
-          <div class="color-btn-slot slot-red">
-            <button type="button" class="round-btn btn-red" id="btn-red" data-color="red" aria-label="Pulsante Rosso Aperitivo"></button>
-            <span class="btn-caption">APERITIVO</span>
-          </div>
+        <!-- RIGHT SCREWED PANEL: 3 COLORED PIXEL BUTTONS WITH LABELS -->
+        <div class="control-plate plate-buttons" aria-label="Pulsanti Evento e Azione">
+          <span class="plate-screw ps-tl"></span>
+          <span class="plate-screw ps-tr"></span>
+          <span class="plate-screw ps-bl"></span>
+          <span class="plate-screw ps-br"></span>
 
-          <!-- GREEN BUTTON: BRUNCH / DRIVE SHOT -->
-          <div class="color-btn-slot slot-green">
-            <button type="button" class="round-btn btn-green" id="btn-green" data-color="green" aria-label="Pulsante Verde Brunch"></button>
-            <span class="btn-caption">BRUNCH</span>
-          </div>
+          <div class="color-buttons-list">
+            <!-- GREEN BUTTON: BRUNCH (labeled "Brunch / Menu") -->
+            <div class="color-btn-row">
+              <button type="button" class="round-btn btn-green" id="btn-green" data-color="green" aria-label="Pulsante Verde Brunch"></button>
+              <span class="btn-side-label lbl-green" data-open-view="view-brunch" data-track-area="green_brunch">Brunch</span>
+            </div>
 
-          <!-- YELLOW BUTTON: TORNEO / LOB & DIVE -->
-          <div class="color-btn-slot slot-yellow">
-            <button type="button" class="round-btn btn-yellow" id="btn-yellow" data-color="yellow" aria-label="Pulsante Giallo Torneo"></button>
-            <span class="btn-caption">TORNEO</span>
+            <!-- RED BUTTON: APERITIVO (labeled "Aperitivo / DJ") -->
+            <div class="color-btn-row">
+              <button type="button" class="round-btn btn-red" id="btn-red" data-color="red" aria-label="Pulsante Rosso Aperitivo"></button>
+              <span class="btn-side-label lbl-red" data-open-view="view-aperitivo" data-track-area="red_aperitivo">Aperitivo</span>
+            </div>
+
+            <!-- YELLOW BUTTON: TORNEO SPORT (labeled "Torneo / Sport") -->
+            <div class="color-btn-row">
+              <button type="button" class="round-btn btn-yellow" id="btn-yellow" data-color="yellow" aria-label="Pulsante Giallo Torneo"></button>
+              <span class="btn-side-label lbl-yellow" data-open-view="view-torneo" data-track-area="yellow_torneo">Torneo</span>
+            </div>
           </div>
         </div>
 
       </div>
 
-      <!-- SINGLE LARGE HORIZONTAL RED/GREY "GIOCA" BUTTON + SPEAKER GRILLE -->
+      <!-- POSTER OPEN INVITATION LINE -->
+      <div class="open-invite-line">
+        Aperta a tutti i soci del circolo e amici
+      </div>
+
+      <!-- BOTTOM DECK: HORIZONTAL SPEAKER SLOTS + GIOCA BUTTON + ADDRESS -->
       <div class="gbc-bottom-row">
-        <div class="play-button-deck">
+        <div class="horiz-speaker-grille" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div class="bottom-right-col">
           <button type="button" class="btn-gioca-main" id="btn-play-game" aria-label="Gioca a Padel">
             <span class="gioca-led"></span>
             <span class="gioca-label">🕹️ GIOCA</span>
           </button>
-        </div>
-
-        <!-- SPEAKER SLOTS -->
-        <div class="speaker-grille" aria-hidden="true">
-          <span></span><span></span><span></span><span></span><span></span><span></span>
+          <div class="club-address">
+            REPUBLIC SPORT VILLAGE<br>
+            VIA S. PIOLA 2, JESOLO
+          </div>
         </div>
       </div>
+
+      <div class="shell-footer-note">PRENOTAZIONE GRADITA</div>
 
     </section>
 
     <!-- FOOTER BAR -->
     <footer class="page-footer">
-      <span>TASTIERA: WASD/FRECCE + SPAZIO (CARICA TIRO) + Z (LOB) | VOL+/-: AUDIO</span>
+      <span>TASTIERA: WASD/FRECCE + SPAZIO (TIRO) + Z (LOB) | VOL+/-: AUDIO</span>
       <a href="admin.php" class="admin-link">🔒 ADMIN</a>
     </footer>
   </main>
