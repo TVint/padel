@@ -211,6 +211,32 @@ html, body {
 .screw-bl { bottom: 6px; left: 6px; }
 .screw-br { bottom: 6px; right: 6px; }
 
+/* Hidden Admin Screw Button in bottom-right corner */
+.hidden-admin-screw {
+  border: 2px solid #0f172a;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  display: block;
+  outline: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.hidden-admin-screw::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+}
+.hidden-admin-screw:hover {
+  filter: brightness(1.25);
+}
+.hidden-admin-screw:active {
+  transform: scale(0.9);
+}
+
 /* =========================================================
    SKIN STICKERS (UOMO & DONNA)
    ========================================================= */
@@ -983,6 +1009,43 @@ html, body {
 .lcd-btn-secondary {
   background: var(--rep-cyan);
   color: #082f49;
+}
+
+.match-over-score-badge {
+  font-size: 7.5px;
+  color: var(--rep-yellow);
+  background: #090d16;
+  border: 1px dashed var(--rep-yellow);
+  padding: 4px 6px;
+  margin-bottom: 7px;
+  display: inline-block;
+}
+
+.full-w-btn {
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 8px;
+  font-size: 6.5px;
+}
+
+.lcd-text-link-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5.5px;
+  cursor: pointer;
+  margin-top: 6px;
+  text-decoration: underline;
+}
+.lcd-text-link-btn:hover {
+  color: #ffffff;
+}
+
+.pause-lb-row.highlighted {
+  background: #334155;
+  border-left: 2px solid #22c55e;
+  color: #fde047;
 }
 
 /* =========================================================

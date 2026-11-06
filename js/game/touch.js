@@ -16,24 +16,9 @@ export class GBCInputController {
     };
 
     this.onButtonPress = null;
-    this.dpadSequence = [];
-    this.onSecretSequence = null;
 
     this._bindKeyboard();
     this._bindShellButtons();
-  }
-
-  _recordDpad(dir) {
-    this.dpadSequence.push(dir);
-    if (this.dpadSequence.length > 6) {
-      this.dpadSequence.shift();
-    }
-    // Secret D-Pad combo: UP, UP, DOWN, DOWN
-    const tail = this.dpadSequence.slice(-4).join(',');
-    if (tail === 'UP,UP,DOWN,DOWN' && typeof this.onSecretSequence === 'function') {
-      this.dpadSequence = [];
-      this.onSecretSequence();
-    }
   }
 
   _bindKeyboard() {
@@ -46,14 +31,12 @@ export class GBCInputController {
       switch (e.code) {
         case 'ArrowUp':
         case 'KeyW':
-          if (!this.keys.up) this._recordDpad('UP');
           this.keys.up = true;
           this._highlight('btn-up', true);
           e.preventDefault();
           break;
         case 'ArrowDown':
         case 'KeyS':
-          if (!this.keys.down) this._recordDpad('DOWN');
           this.keys.down = true;
           this._highlight('btn-down', true);
           e.preventDefault();
@@ -163,9 +146,6 @@ export class GBCInputController {
         }
         this.keys[keyProp] = true;
         el.classList.add('pressed');
-        if (codeName === 'UP' || codeName === 'DOWN') {
-          this._recordDpad(codeName);
-        }
         this._triggerCallback(codeName);
       };
 

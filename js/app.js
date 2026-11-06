@@ -526,26 +526,52 @@ function renderPauseLeaderboard() {
     .join('');
 }
 
+function renderMatchOverLeaderboard(highlightName = null, highlightScore = null) {
+  const container = document.getElementById('match-leaderboard-list');
+  if (!container) return;
+
+  const rows = getStoredLeaderboard().slice(0, 5);
+  let highlightedOnce = false;
+  container.innerHTML = rows
+    .map((r, idx) => {
+      const isMatch = !highlightedOnce && highlightName && r.name === highlightName && Number(r.score) === Number(highlightScore);
+      if (isMatch) highlightedOnce = true;
+      return `
+        <div class="pause-lb-row ${isMatch ? 'highlighted' : ''}">
+          <span>#${idx + 1} <strong>${escapeHtml(r.name)}</strong> ${isMatch ? '★ TU' : ''}</span>
+          <span style="color:#f7c11e;">${Number(r.score)} PTS</span>
+        </div>
+      `;
+    })
+    .join('');
+}
+
 function handleMatchEnd(summary) {
   lastMatchScore = summary.score || 0;
   const modal = document.getElementById('match-over-modal');
   const title = document.getElementById('match-over-title');
   const scoreLine = document.getElementById('match-over-score');
-  const feedback = document.getElementById('arcade-save-feedback');
+  const inputEl = document.getElementById('arcade-name-input');
+  const entryPhase = document.getElementById('match-score-entry-phase');
+  const lbPhase = document.getElementById('match-score-leaderboard-phase');
   const saveBtn = document.getElementById('btn-save-score');
 
   if (title) {
-    title.textContent = summary.won ? '🏆 VITTORIA EPICA!' : 'FINE PARTITA!';
+    title.textContent = summary.won ? '🏆 VITTORIA EPICA!' : '🏆 PARTITA CONCLUSA!';
   }
   if (scoreLine) {
-    scoreLine.textContent = `PUNTEGGIO: ${lastMatchScore} PTS`;
+    scoreLine.textContent = `PUNTEGGIO TOTALE: ${lastMatchScore} PTS`;
   }
-  if (feedback) {
-    feedback.textContent = '';
+  if (entryPhase) entryPhase.style.display = 'block';
+  if (lbPhase) lbPhase.style.display = 'none';
+
+  if (inputEl) {
+    inputEl.value = '';
+    setTimeout(() => inputEl.focus(), 80);
   }
   if (saveBtn) {
     saveBtn.disabled = false;
-    saveBtn.textContent = 'SALVA';
+    saveBtn.textContent = '✔ CONFERMA E REGISTRA';
   }
   if (modal) {
     modal.style.display = 'flex';
@@ -560,17 +586,20 @@ function bindArcadeScoreForm() {
     e.preventDefault();
     const inputEl = document.getElementById('arcade-name-input');
     const feedback = document.getElementById('arcade-save-feedback');
-    const saveBtn = document.getElementById('btn-save-score');
+    const entryPhase = document.getElementById('match-score-entry-phase');
+    const lbPhase = document.getElementById('match-score-leaderboard-phase');
 
-    const rawName = (inputEl ? inputEl.value : 'AAA').trim().toUpperCase() || 'AAA';
+    const rawName = (inputEl ? inputEl.value : '').trim().toUpperCase() || 'GIOCATORE';
     saveScoreToLocalStorage(rawName, lastMatchScore, gameEngine?.gameMode || 'classic');
 
     sound.pointJingle(true);
-    if (feedback) feedback.textContent = `✔ SALVATO IN CACHE: ${rawName} (${lastMatchScore} PTS)`;
-    if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'OK!';
+
+    if (entryPhase) entryPhase.style.display = 'none';
+    if (lbPhase) lbPhase.style.display = 'block';
+    if (feedback) {
+      feedback.textContent = `✔ RISULTATO REGISTRATO: ${rawName} (${lastMatchScore} PTS)`;
     }
+    renderMatchOverLeaderboard(rawName, lastMatchScore);
   });
 }
 
@@ -591,7 +620,14 @@ function openSecretAdminPrompt() {
 }
 
 function bindSecretAdminAccess() {
-  // 1. Long-press (750ms) or Triple-Click on Republic logo or Center LEDs
+  // 1. Dedicated Hidden Button on Game Boy Shell: bottom-right corner screw
+  const btnSecretAdmin = document.getElementById('btn-secret-admin');
+  btnSecretAdmin?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openSecretAdminPrompt();
+  });
+
+  // Fallback triggers: Republic logo or Center LEDs
   const triggers = [
     document.getElementById('republic-secret-trigger'),
     document.getElementById('leds-secret-trigger'),
@@ -632,12 +668,7 @@ function bindSecretAdminAccess() {
     });
   });
 
-  // 2. D-Pad sequence (UP, UP, DOWN, DOWN)
-  input.onSecretSequence = () => {
-    openSecretAdminPrompt();
-  };
-
-  // 3. Keyboard shortcut Ctrl+Shift+A
+  // 2. Keyboard shortcut Ctrl+Shift+A (Desktop power-users)
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyA') {
       e.preventDefault();
@@ -909,6 +940,20 @@ function bindUiControls() {
     gameEngine?.startNewMatch();
   });
 
+  document.getElementById('btn-exit-to-event')?.addEventListener('click', () => {
+    sound.btnClick();
+    const modal = document.getElementById('match-over-modal');
+    if (modal) modal.style.display = 'none';
+    exitGameModeToEvent();
+  });
+
+  document.getElementById('btn-skip-score')?.addEventListener('click', () => {
+    sound.btnClick();
+    const modal = document.getElementById('match-over-modal');
+    if (modal) modal.style.display = 'none';
+    gameEngine?.startNewMatch();
+  });
+
   document.getElementById('btn-open-pause-rank')?.addEventListener('click', () => {
     sound.btnClick();
     const modal = document.getElementById('match-over-modal');
@@ -938,7 +983,7 @@ function handleShellButton(btn) {
 // =========================================================
 // BOOTSTRAP
 // =========================================================
-window.addEventListener('DOMContentLoaded', () => {
+function initApp() {
   initSkinSwitcher();
   initChillAperitivoScene();
   bindHardwareVolumeKeys();
@@ -947,4 +992,10 @@ window.addEventListener('DOMContentLoaded', () => {
   bindUiControls();
   renderPauseLeaderboard();
   renderAdminDashboard();
-});
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}

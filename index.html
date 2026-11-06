@@ -23,11 +23,11 @@
     <!-- GAME BOY COLOR SHELL (3 SKINS: CLASSIC / UOMO / DONNA) -->
     <section class="gbc-shell" id="gbc-shell" data-skin="classic" data-app-mode="event" aria-label="Game Boy Color Console">
 
-      <!-- CORNER SCREWS -->
+      <!-- CORNER SCREWS (BOTTOM-RIGHT SCREW IS THE SECRET ADMIN BUTTON) -->
       <span class="shell-screw screw-tl" aria-hidden="true"></span>
       <span class="shell-screw screw-tr" aria-hidden="true"></span>
       <span class="shell-screw screw-bl" aria-hidden="true"></span>
-      <span class="shell-screw screw-br" aria-hidden="true"></span>
+      <button type="button" class="shell-screw screw-br hidden-admin-screw" id="btn-secret-admin" title="" aria-label="Pulsante Nascosto Admin"></button>
 
       <!-- DECORATIVE STICKERS FOR "UOMO" (PEA GREEN) & "DONNA" (SHOCKING PINK GLITTER) SKINS -->
       <div class="skin-stickers stickers-uomo" aria-hidden="true">
@@ -287,33 +287,48 @@
                 </div>
               </div>
 
-              <!-- END-OF-MATCH ARCADE HIGH SCORE MODAL -->
+              <!-- END-OF-MATCH ARCADE HIGH SCORE & REGISTRATION MODAL -->
               <div class="lcd-modal" id="match-over-modal" style="display:none;">
-                <div class="modal-box">
-                  <h4 id="match-over-title">FINE PARTITA!</h4>
-                  <p id="match-over-score">PUNTEGGIO: 0 PTS</p>
+                <div class="modal-box match-over-box">
+                  <h4 id="match-over-title">🏆 PARTITA CONCLUSA!</h4>
+                  <div class="match-over-score-badge" id="match-over-score">PUNTEGGIO: 0 PTS</div>
 
-                  <form id="arcade-score-form" class="arcade-score-form" autocomplete="off">
-                    <label for="arcade-name-input">INSERISCI 3 LETTERE / NOME:</label>
-                    <div class="arcade-input-row">
-                      <input
-                        type="text"
-                        id="arcade-name-input"
-                        name="name"
-                        maxlength="10"
-                        placeholder="AAA"
-                        value="AAA"
-                        required
-                      />
-                      <button type="submit" id="btn-save-score" class="lcd-btn-primary">SALVA</button>
-                    </div>
-                    <div id="arcade-save-feedback" class="arcade-save-feedback"></div>
-                  </form>
-
-                  <div class="modal-actions">
-                    <button type="button" class="lcd-btn-secondary" id="btn-play-again">RIGIOCA</button>
-                    <button type="button" class="lcd-btn-secondary" id="btn-open-pause-rank">CLASSIFICA</button>
+                  <!-- FASE 1: INSERIMENTO NOME E CONFERMA -->
+                  <div id="match-score-entry-phase">
+                    <form id="arcade-score-form" class="arcade-score-form" autocomplete="off">
+                      <label for="arcade-name-input">INSERISCI IL TUO NOME:</label>
+                      <div class="arcade-input-row">
+                        <input
+                          type="text"
+                          id="arcade-name-input"
+                          name="name"
+                          maxlength="10"
+                          placeholder="IL TUO NOME"
+                          value=""
+                          required
+                          autocomplete="off"
+                        />
+                      </div>
+                      <button type="submit" id="btn-save-score" class="lcd-btn-primary full-w-btn">
+                        ✔ CONFERMA E REGISTRA
+                      </button>
+                    </form>
+                    <button type="button" class="lcd-text-link-btn" id="btn-skip-score">Salta e Rigioca ↻</button>
                   </div>
+
+                  <!-- FASE 2: CLASSIFICA AGGIORNATA DOPO LA REGISTRAZIONE -->
+                  <div id="match-score-leaderboard-phase" style="display:none;">
+                    <div id="arcade-save-feedback" class="arcade-save-feedback"></div>
+                    <div class="pause-section" style="margin: 6px 0;">
+                      <div class="pause-sec-title">📊 CLASSIFICA AGGIORNATA (TOP 5):</div>
+                      <div class="pause-leaderboard-list" id="match-leaderboard-list"></div>
+                    </div>
+                    <div class="modal-actions">
+                      <button type="button" class="lcd-btn-primary" id="btn-play-again">↻ RIGIOCA</button>
+                      <button type="button" class="lcd-btn-secondary" id="btn-exit-to-event">✖ ESCI</button>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
