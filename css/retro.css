@@ -681,9 +681,23 @@ html, body {
 .morning-marquee-wrap {
   background: #0f172a;
   border: 2px solid var(--rep-yellow);
-  padding: 4px;
+  padding: 5px 0;
   margin-bottom: 5px;
   box-shadow: 2px 2px 0 #000;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.morning-marquee-wrap:hover .morning-marquee-track {
+  animation-play-state: paused;
+}
+
+.morning-marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+  animation: marqueeScroll 15s linear infinite;
 }
 
 .morning-marquee {
@@ -691,6 +705,27 @@ html, body {
   font-size: 7.5px;
   color: var(--rep-yellow);
   letter-spacing: 0.8px;
+  padding-right: 48px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.blink-sun {
+  display: inline-block;
+  animation: sunBlink 0.9s steps(2, start) infinite;
+}
+
+@keyframes sunBlink {
+  50% { opacity: 0.25; transform: scale(0.92); }
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 .dj-stage-wrap {
